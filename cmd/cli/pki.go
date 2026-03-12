@@ -53,7 +53,7 @@ var PkiKeyPairImport = &cobra.Command{
 			return fmt.Errorf("must provide certPath and keyPath args")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ var PkiKeyPairList = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ var PkiKeyPairRemove = &cobra.Command{
 			return fmt.Errorf("must provide SKI")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ var PkiTrustList = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -152,7 +152,7 @@ var PkiTrustImport = &cobra.Command{
 		cfgPath, _ := cmd.Flags().GetString("config")
 		method, _ := cmd.Flags().GetString("method")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ var PkiTrustRefresh = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ var PkiTrustRemove = &cobra.Command{
 			return fmt.Errorf("must provide SKI")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}

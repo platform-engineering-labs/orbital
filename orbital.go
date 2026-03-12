@@ -81,12 +81,7 @@ type Tree struct {
 	orb *Orbital
 }
 
-func New(cfg *config.Config, treeType tree.Type, sec security.Mode, logger *slog.Logger) (*Orbital, error) {
-	tr, err := tree.New(logger, cfg.TreeRoot, treeType, sec)
-	if err != nil {
-		return nil, err
-	}
-
+func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error) {
 	orb := &Orbital{
 		Logger: logger,
 		config: cfg,
@@ -101,7 +96,7 @@ func New(cfg *config.Config, treeType tree.Type, sec security.Mode, logger *slog
 	orb.Transaction = &Transaction{logger, orb}
 	orb.Tree = &Tree{logger, orb}
 
-	err = orb.Init()
+	err := orb.Init()
 	if err != nil {
 		return nil, err
 	}
@@ -579,13 +574,20 @@ func (o *Orbital) getContext(phase string, options *provider.Options) context.Co
 	return ctx
 }
 
-func Dynamic(cfgPath string, logger *slog.Logger) (*Orbital, error) {
+func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return nil, err
 	}
 
-	orb, err := New(cfg, tree.Dynamic, security.Empty, logger)
+	cfg.Mode = config.DynamicMode
+
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic)
+	if err != nil {
+		return nil, err
+	}
+
+	orb, err := New(logger, cfg, tr)
 	if err != nil {
 		return nil, fmt.Errorf("error: %s", err)
 	}
@@ -593,13 +595,15 @@ func Dynamic(cfgPath string, logger *slog.Logger) (*Orbital, error) {
 	return orb, nil
 }
 
-func Embedded(sec security.Mode, logger *slog.Logger) (*Orbital, error) {
-	cfg, err := config.Load("")
+func Embedded(logger *slog.Logger, cfg *config.Config) (*Orbital, error) {
+	cfg.Mode = config.EmbeddedMode
+
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded)
 	if err != nil {
 		return nil, err
 	}
 
-	orb, err := New(cfg, tree.Embedded, sec, logger)
+	orb, err := New(logger, cfg, tr)
 	if err != nil {
 		return nil, fmt.Errorf("error: %s", err)
 	}

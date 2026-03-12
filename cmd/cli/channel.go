@@ -33,7 +33,7 @@ var Channel = &cobra.Command{
 			return fmt.Errorf("channel flag is required")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}

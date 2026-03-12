@@ -25,7 +25,7 @@ var CacheClean = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ var CacheClear = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}

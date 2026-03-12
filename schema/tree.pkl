@@ -21,7 +21,7 @@ security: Security = "default"
 
 repositories: Listing<Repository> = new {
   new {
-    uri = "https://packages.platform.engineering/platform.engineering/orbital#stable"
+    uri = "https://hub.platform.engineering/repos/platform.engineering/pel#stable"
 
     priority = 0
   }

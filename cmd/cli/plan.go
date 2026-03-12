@@ -21,11 +21,11 @@ var Plan = &cobra.Command{
 			return fmt.Errorf("must specify an action and at least one package to plan")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
-		
+
 		operations, err := orb.Plan(cmd.Flags().Arg(0), cmd.Flags().Args()[1:]...)
 		if err != nil {
 			return err

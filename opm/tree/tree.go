@@ -76,7 +76,7 @@ func CreateDefault(root string) error {
 	return tree.Switch(names.TreeDefault)
 }
 
-func New(log *slog.Logger, root string, t Type, sec security.Mode) (Tree, error) {
+func New(log *slog.Logger, root string, t Type) (Tree, error) {
 	var err error
 
 	switch t {
@@ -93,15 +93,11 @@ func New(log *slog.Logger, root string, t Type, sec security.Mode) (Tree, error)
 			Arch: tr.cfg.Arch,
 		}
 
-		if sec == security.Empty {
-			sec = tr.cfg.Security
-		}
-
 		tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
 		tr.pki = pki.New(paths.TreePki(tr.Current().Path))
 		tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
 
-		tr.sec, err = security.New(tr.Logger, sec, tr.pki)
+		tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +117,7 @@ func New(log *slog.Logger, root string, t Type, sec security.Mode) (Tree, error)
 		tr.pki = pki.New(paths.TreePki(tr.Current().Path))
 		tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
 
-		tr.sec, err = security.New(tr.Logger, sec, tr.pki)
+		tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
 		if err != nil {
 			return nil, err
 		}

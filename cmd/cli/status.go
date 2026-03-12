@@ -22,7 +22,7 @@ var Status = &cobra.Command{
 			return fmt.Errorf("package not specified")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}

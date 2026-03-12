@@ -61,7 +61,7 @@ var OpkgBuild = &cobra.Command{
 			pltfrm = &platform.Platform{OS: os.OS(fos), Arch: arch.Arch(farch)}
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ var OpkgDump = &cobra.Command{
 			return errors.New("missing opkg path")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ var OpkgExtract = &cobra.Command{
 			targetPath = cmd.Flags().Arg(1)
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ var OpkgContents = &cobra.Command{
 			return errors.New("missing opkg path")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ var OpkgInfo = &cobra.Command{
 			return errors.New("missing opkg path")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ var OpkgValidate = &cobra.Command{
 			return errors.New("missing opkg path")
 		}
 
-		orb, err := orbital.Dynamic(cfgPath, slog.New(Logger))
+		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
 		if err != nil {
 			return err
 		}
