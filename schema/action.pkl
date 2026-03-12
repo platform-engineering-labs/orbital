@@ -1,0 +1,24 @@
+module ops.action
+
+open class Action {}
+
+class Dir extends Action {
+  path:  String
+  owner: String
+  group: String
+  mode:  Number = 0o750
+}
+
+class File extends Action {
+  path:  String
+  owner: String
+  group: String
+  mode:  Number = 0o640
+}
+
+class SymLink extends Action {
+  path:  String
+  owner: String
+  group: String
+  target: String
+}

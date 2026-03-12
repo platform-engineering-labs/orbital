@@ -1,0 +1,4 @@
+module ops.platform
+
+typealias Arch = "all"|"arm64"|"x8664"
+typealias OS = "all"|"darwin"|"linux"

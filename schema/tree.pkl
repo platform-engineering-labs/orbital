@@ -1,0 +1,28 @@
+module ops.Tree
+
+import "platform.pkl"
+
+typealias Security = "default"|"none"|"offline"
+
+class Repository {
+  uri: Uri
+  uriPublish: Uri = uri
+
+  priority: Number = 1
+  enabled: Boolean = true
+
+  prune: Number = 10
+}
+
+arch: platform.Arch = read("prop:arch") as platform.Arch
+os: platform.OS = read("prop:os") as platform.OS
+
+security: Security = "default"
+
+repositories: Listing<Repository> = new {
+  new {
+    uri = "https://packages.platform.engineering/platform.engineering/orbital#stable"
+
+    priority = 0
+  }
+}

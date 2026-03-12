@@ -1,0 +1,7 @@
+module ops.Config
+
+typealias Mode = "embedded"|"dynamic"|"root"
+
+mode: Mode = "dynamic"
+
+treeRoot: String = read("prop:treeRoot")

@@ -1,0 +1,28 @@
+module ops.OpkgFile
+
+import "pkl:semver"
+import "action.pkl"
+import "platform.pkl"
+import "requirement.pkl"
+
+
+name: String
+version: semver.Version
+publisher: String
+originator: String?
+os: platform.OS = read("prop:os") as platform.OS
+arch: platform.Arch = read("prop:arch") as platform.Arch
+summary: String
+description: String
+requirements: Listing<requirement.Requirement>?
+metadata: Mapping<String, Mapping<String, String>>?
+
+actions: Listing<action.Action>
+
+output {
+  renderer {
+    converters {
+      [semver.Version] = (it) -> it.toString()
+    }
+  }
+}

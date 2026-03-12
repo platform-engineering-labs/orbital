@@ -1,0 +1,14 @@
+amends "orbital:/opkg.pkl"
+
+import "pkl:semver"
+
+name = "test-package"
+version =  semver.Version("0.1.0")
+publisher = "platform.engineering"
+summary = "test package for testing ops"
+description = "the testing package that is used for testing"
+metadata {
+  ["ops"] {
+    ["key"] = "value"
+  }
+}

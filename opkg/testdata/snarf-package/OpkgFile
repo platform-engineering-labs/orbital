@@ -1,0 +1,14 @@
+amends "orbital:/opkg.pkl"
+
+import "pkl:semver"
+
+name = "snarf-package"
+version =  semver.Version("0.2.0")
+publisher = "platform.engineering"
+summary = "snarf package for testing ops"
+description = "the snarf package that is used for testing"
+metadata {
+  ["ops"] {
+    ["key"] = "value"
+  }
+}

@@ -1,0 +1,13 @@
+module ops.Requirement
+
+import "pkl:semver"
+
+typealias Method = "conflicts"|"depends"|"provides"
+typealias Operator = "ANY"|"GTE"|"LTE"|"EQ"|"EXQ"
+
+class Requirement {
+  name: String
+  method: Method
+  Operator: Operator
+  Version: semver.Version
+}
