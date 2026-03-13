@@ -6,4 +6,5 @@ type Package struct {
 	*ops.Header
 	Frozen    bool
 	Installed bool
+	Locations []int
 }

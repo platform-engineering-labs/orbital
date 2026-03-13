@@ -34,6 +34,7 @@ type Tree interface {
 	Destroy(name string) (*Entry, error)
 	Get(name string) (*Entry, error)
 	Init(name string, pltfrm *platform.Platform, force bool) (*Entry, error)
+	Ready() bool
 	List() ([]*Entry, error)
 	Lock() error
 	Unlock() error
@@ -76,7 +77,7 @@ func CreateDefault(root string) error {
 	return tree.Switch(names.TreeDefault)
 }
 
-func New(log *slog.Logger, root string, t Type) (Tree, error) {
+func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 	var err error
 
 	switch t {
@@ -93,36 +94,37 @@ func New(log *slog.Logger, root string, t Type) (Tree, error) {
 			Arch: tr.cfg.Arch,
 		}
 
-		tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-		tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-		tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+		if tr.Ready() {
+			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
+			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
+			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
 
-		tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
-		if err != nil {
-			return nil, err
+			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
+			if err != nil {
+				return nil, err
+			}
+
+			tr.state = state.New(paths.TreeState(tr.Current().Path))
 		}
-
-		tr.state = state.New(paths.TreeState(tr.Current().Path))
 
 		return tr, nil
 	case Embedded:
 		tr := &TreeEmbedded{Logger: log, root: root, platform: platform.Current()}
 
-		tr.cfg, err = Load("")
-		if err != nil {
-			return nil, err
+		tr.cfg = cfg
+
+		if tr.Ready() {
+			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
+			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
+			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+
+			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
+			if err != nil {
+				return nil, err
+			}
+
+			tr.state = state.New(paths.TreeState(tr.Current().Path))
 		}
-
-		tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-		tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-		tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
-
-		tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
-		if err != nil {
-			return nil, err
-		}
-
-		tr.state = state.New(paths.TreeState(tr.Current().Path))
 
 		return tr, nil
 	default:
@@ -285,6 +287,10 @@ func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool) (*ops.Poo
 	return pool(t, platforms, empty)
 }
 
+func (t *TreeDynamic) Ready() bool {
+	return filepathx.FileExists(filepath.Join(t.root, t.Current().Name, names.TreeDataDir))
+}
+
 func (t *TreeDynamic) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {
 	return load(t, platforms, repo, all)
 }
@@ -376,13 +382,13 @@ func (t *TreeEmbedded) Get(name string) (*Entry, error) {
 	}, nil
 }
 
-func (t *TreeEmbedded) Init(name string, _ *platform.Platform, force bool) (*Entry, error) {
+func (t *TreeEmbedded) Init(_ string, _ *platform.Platform, force bool) (*Entry, error) {
 	if t.root == "" {
 		return nil, fmt.Errorf("error: tree root should not be empty")
 	}
 
 	if filepathx.FileExists(t.root) && !force {
-		return nil, fmt.Errorf("%s already exists: %s", name, t.root)
+		return nil, fmt.Errorf("already exists: %s", t.root)
 	}
 
 	if filepathx.FileExists(t.root) && force {
@@ -420,6 +426,10 @@ func (t *TreeEmbedded) Pki() *pki.Pki {
 
 func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
 	return pool(t, platforms, empty)
+}
+
+func (t *TreeEmbedded) Ready() bool {
+	return filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir))
 }
 
 func (t *TreeEmbedded) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {

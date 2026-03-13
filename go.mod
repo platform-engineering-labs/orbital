@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.1.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
 	github.com/blang/semver/v4 v4.0.0
+	github.com/goforj/godump v1.9.1
 	github.com/gofrs/flock v0.13.0
 	github.com/klauspost/compress v1.18.4
 	github.com/lunixbochs/struc v0.0.0-20241101090106-8d528fa2c543

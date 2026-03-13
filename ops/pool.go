@@ -46,6 +46,10 @@ func NewPool(tree *Repository, frozen map[string]bool, repos ...*Repository) (*P
 	return pool, nil
 }
 
+func (p *Pool) Available() map[string]Headers {
+	return p.index
+}
+
 func (p *Pool) Contains(pkg *Header) bool {
 	if _, ok := p.index[pkg.Name]; ok {
 		for _, candidate := range p.index[pkg.Name] {
@@ -116,6 +120,7 @@ func (p *Pool) WhatProvides(req *Requirement) Headers {
 		}
 	}
 
+	sort.Sort(provides)
 	return provides
 }
 

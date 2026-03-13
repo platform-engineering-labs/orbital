@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -105,7 +106,7 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 }
 
 func (o *Orbital) Init() error {
-	if o.config.Mode != config.EmbeddedMode {
+	if o.config.Mode == config.DynamicMode {
 		_ = os.MkdirAll(paths.ConfigDefault(), 0750)
 		_ = os.MkdirAll(paths.DataDefault(), 0750)
 
@@ -375,6 +376,10 @@ func (o *Orbital) Refresh() error {
 	return nil
 }
 
+func (o *Orbital) Ready() bool {
+	return o.tree.Ready()
+}
+
 func (o *Orbital) Remove(packages ...string) error {
 	err := o.tree.Lock()
 	if err != nil {
@@ -414,41 +419,55 @@ func (o *Orbital) Remove(packages ...string) error {
 	return tr.Realize(solution)
 }
 
-func (o *Orbital) Status(pkg string) (status candidate.Status, packages []*records.Package, err error) {
-	err = o.tree.Lock()
+func (o *Orbital) Status(pkg string) (*records.Status, error) {
+	err := o.tree.Lock()
 	if err != nil {
-		return candidate.None, nil, err
+		return &records.Status{Status: candidate.None}, err
 	}
 	defer o.tree.Unlock()
 
 	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
 	if err != nil {
-		return candidate.None, nil, err
+		return &records.Status{Status: candidate.None}, err
 	}
 
 	req, err := ops.NewRequirementFromSimpleString(pkg)
 	if err != nil {
-		return candidate.None, nil, err
+		return &records.Status{Status: candidate.None}, err
 	}
 
-	status = candidate.Available
+	result := &records.Status{
+		Status: candidate.Available,
+	}
+
 	for _, pkg := range pool.WhatProvides(req) {
 		record := &records.Package{Header: pkg, Frozen: pool.Frozen(pkg.Id().String()), Installed: pkg.Priority == -1}
+		record.Locations = append(record.Locations, pkg.Location)
+
 		if record.Frozen {
-			status = candidate.Frozen
+			result.Status = candidate.Frozen
 		}
 		if record.Installed {
-			status = candidate.Installed
+			result.Status = candidate.Installed
 		}
 
-		packages = append(packages, record)
+		if found := slices.IndexFunc(result.Available, func(r *records.Package) bool {
+			return pkg.Version.EXQ(r.Version)
+		}); found != -1 {
+			result.Available[found].Locations = append(result.Available[found].Locations, pkg.Location)
+		} else {
+			result.Available = append(result.Available, record)
+		}
+
 	}
 
-	if len(packages) == 0 {
-		status = candidate.NotFound
+	if len(result.Available) == 0 {
+		result.Status = candidate.NotFound
 	}
 
-	return status, packages, nil
+	result.Sort()
+
+	return result, nil
 }
 
 func (o *Orbital) Thaw(packages ...string) error {
@@ -582,7 +601,7 @@ func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
 
 	cfg.Mode = config.DynamicMode
 
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic)
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -595,10 +614,13 @@ func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
 	return orb, nil
 }
 
-func Embedded(logger *slog.Logger, cfg *config.Config) (*Orbital, error) {
-	cfg.Mode = config.EmbeddedMode
+func Embedded(logger *slog.Logger, treePath string, treeConfig *tree.Config) (*Orbital, error) {
+	cfg := &config.Config{
+		Mode:     config.EmbeddedMode,
+		TreeRoot: treePath,
+	}
 
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded)
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded, treeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,6 +1080,10 @@ func (t *Tree) Get(name string) (*tree.Entry, error) {
 
 func (t *Tree) Init(name string, pltfrm *platform.Platform, force bool) (*tree.Entry, error) {
 	return t.orb.tree.Init(name, pltfrm, force)
+}
+
+func (t *Tree) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
+	return t.orb.tree.Pool(platforms, empty)
 }
 
 func (t *Tree) List() ([]*tree.Entry, error) {

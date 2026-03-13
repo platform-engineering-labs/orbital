@@ -27,24 +27,24 @@ var Status = &cobra.Command{
 			return err
 		}
 
-		_, packages, err := orb.Status(cmd.Flags().Arg(0))
+		status, err := orb.Status(cmd.Flags().Arg(0))
 		if err != nil {
 			return err
 		}
 
-		if len(packages) == 0 {
+		if len(status.Available) == 0 {
 			return nil
 		}
 
 		tbl := table.New()
 		tbl.Headers("Name", "Version", "Summary", "Status")
 
-		for _, pkg := range packages {
+		for _, pkg := range status.Available {
 			status := ""
 
 			if pkg.Frozen {
 				status = lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Render("*")
-			} else if pkg.Priority == -1 {
+			} else if pkg.Installed {
 				status = lipgloss.NewStyle().Foreground(lipgloss.Color("202")).Render("*")
 			}
 

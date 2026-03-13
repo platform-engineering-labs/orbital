@@ -75,10 +75,12 @@ func (f *FsFetcher) Refresh() error {
 		metadataPath := filepath.Join(f.repo.Uri.Path, pltfrm.String(), names.MetaDataDb)
 
 		if _, err := os.Stat(filepath.Join(f.repo.Uri.Path, pltfrm.String())); os.IsNotExist(err) {
+			os.Remove(f.cache.GetMeta(pltfrm.String(), f.repo.SafeUri()))
 			continue
 		}
 
 		if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
+			os.Remove(f.cache.GetMeta(pltfrm.String(), f.repo.SafeUri()))
 			continue
 		}
 
