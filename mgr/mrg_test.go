@@ -1,7 +1,6 @@
 package mgr
 
 import (
-	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"github.com/platform-engineering-labs/orbital/opm/tree"
 	"github.com/platform-engineering-labs/orbital/ops"
 	"github.com/platform-engineering-labs/orbital/platform"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMgr(t *testing.T) {
@@ -32,4 +32,6 @@ func TestMgr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	assert.False(t, mgr.Ready())
 }
