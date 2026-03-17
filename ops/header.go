@@ -14,6 +14,7 @@ type Header struct {
 	Version      *Version                     `pkl:"version" json:"version"`
 	Publisher    string                       `pkl:"publisher" json:"publisher"`
 	Originator   string                       `pkl:"originator" json:"originator,omitempty"`
+	License      string                       `pkl:"license" json:"license,omitempty"`
 	Arch         arch.Arch                    `pkl:"arch" json:"arch"`
 	OS           os.OS                        `pkl:"os" json:"os"`
 	Summary      string                       `pkl:"summary" json:"summary"`

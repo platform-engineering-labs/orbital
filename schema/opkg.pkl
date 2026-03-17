@@ -10,6 +10,7 @@ name: String
 version: semver.Version
 publisher: String
 originator: String?
+license: String?
 os: platform.OS = read("prop:os") as platform.OS
 arch: platform.Arch = read("prop:arch") as platform.Arch
 summary: String
