@@ -125,8 +125,8 @@ func ValidateBytes(content *[]byte, cert *x509.Certificate, signature action.Sig
 	return nil
 }
 
-func ValidateKeyPair(certPath string, keyPath string) error {
-	_, err := tls.LoadX509KeyPair(certPath, keyPath)
+func ValidateKeyPair(cert, key []byte) error {
+	_, err := tls.X509KeyPair(cert, key)
 
 	return err
 }

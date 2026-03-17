@@ -14,6 +14,7 @@ func init() {
 	Pki.AddCommand(PkiKeyPair)
 	Pki.AddCommand(PkiTrust)
 
+	PkiKeyPairImport.Flags().StringP("method", "m", "file", "methods: file | env")
 	PkiTrustImport.Flags().StringP("method", "m", "file", "methods: file | dns")
 
 	PkiKeyPair.AddCommand(PkiKeyPairImport)
@@ -43,14 +44,23 @@ var PkiTrust = &cobra.Command{
 }
 
 var PkiKeyPairImport = &cobra.Command{
-	Use:   "import [certPath] [keyPath]",
+	Use:   "import [certPath] [keyPath] | [certEnvVar] [keyEnvVar]",
 	Short: "import keypair",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
+		method, _ := cmd.Flags().GetString("method")
 
-		if cmd.Flags().Arg(0) == "" || cmd.Flags().Arg(1) == "" {
-			return fmt.Errorf("must provide certPath and keyPath args")
+		if method == "file" {
+			if cmd.Flags().Arg(0) == "" || cmd.Flags().Arg(1) == "" {
+				return fmt.Errorf("must provide certPath and keyPath args")
+			}
+		} else if method == "env" {
+			if cmd.Flags().Arg(0) == "" || cmd.Flags().Arg(1) == "" {
+				return fmt.Errorf("must provide certEnvVar and keyEnvVar args")
+			}
+		} else {
+			return fmt.Errorf("unknown method: %s", method)
 		}
 
 		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
@@ -58,7 +68,7 @@ var PkiKeyPairImport = &cobra.Command{
 			return err
 		}
 
-		return orb.Pki.KeyPairImport(cmd.Flags().Arg(0), cmd.Flags().Arg(1))
+		return orb.Pki.KeyPairImport(method, cmd.Flags().Arg(0), cmd.Flags().Arg(1))
 	},
 }
 
@@ -146,7 +156,7 @@ var PkiTrustList = &cobra.Command{
 
 var PkiTrustImport = &cobra.Command{
 	Use:   "import [certPath ...] | [ski] [publisher]",
-	Short: "import trusted certificate",
+	Short: "import trusted certificate(s)",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")

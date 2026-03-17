@@ -725,24 +725,43 @@ func (o *Opkg) Validate(opkgPath string) error {
 	return validator.Validate(opkgPath)
 }
 
-func (p *Pki) KeyPairImport(certPath, keyPath string) error {
+func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 	err := p.orb.tree.Lock()
 	if err != nil {
 		return err
 	}
 	defer p.orb.tree.Unlock()
 
-	err = security.ValidateKeyPair(certPath, keyPath)
-	if err != nil {
-		return err
+	var certPem, keyPem []byte
+
+	switch mode {
+	case "env":
+		certEnv, exists := os.LookupEnv(cert)
+		if !exists {
+			return fmt.Errorf("missing certificate: %s", cert)
+		}
+		certPem = []byte(certEnv)
+
+		keyEnv, exists := os.LookupEnv(cert)
+		if !exists {
+			return fmt.Errorf("missing key: %s", key)
+		}
+		keyPem = []byte(keyEnv)
+	case "file":
+		certPem, err = os.ReadFile(cert)
+		if err != nil {
+			return err
+		}
+
+		keyPem, err = os.ReadFile(key)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid import mode: %s", mode)
 	}
 
-	certPem, err := os.ReadFile(certPath)
-	if err != nil {
-		return err
-	}
-
-	keyPem, err := os.ReadFile(keyPath)
+	err = security.ValidateKeyPair(certPem, keyPem)
 	if err != nil {
 		return err
 	}
@@ -766,7 +785,7 @@ func (p *Pki) KeyPairImport(certPath, keyPath string) error {
 				),
 			)
 
-			err := p.orb.tree.Pki().KeyPairs.Del(kps[index].Fingerprint)
+			err := p.orb.tree.Pki().KeyPairs.Del(kps[index].SKI)
 			if err != nil {
 				return err
 			}
