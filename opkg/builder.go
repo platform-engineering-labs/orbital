@@ -133,6 +133,8 @@ func (b *Builder) setPaths() error {
 	if b.options.TargetPath == "" {
 		dir, _ := path.Split(b.opfPath)
 		b.options.TargetPath = path.Join(dir, names.OpkgTarget)
+	} else {
+		b.options.TargetPath, _ = filepath.Abs(b.options.TargetPath)
 	}
 	if b.options.WorkPath == "" {
 		b.options.WorkPath = wd
@@ -140,6 +142,8 @@ func (b *Builder) setPaths() error {
 	}
 	if b.options.OutputPath == "" {
 		b.options.OutputPath, _ = path.Split(b.opfPath)
+	} else {
+		b.options.OutputPath, _ = filepath.Abs(b.options.OutputPath)
 	}
 
 	return err
