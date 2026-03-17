@@ -52,6 +52,7 @@ func NewRepo(uri url.URL, enabled bool, priority int) *Repository {
 
 func (repo *Repository) Inventory() Inventory {
 	var inventory Inventory
+	ids := make(map[string]bool)
 
 	for pltfrm, channels := range repo.Channels {
 		for _, channel := range channels {
@@ -71,16 +72,17 @@ func (repo *Repository) Inventory() Inventory {
 			inventory = append(inventory, inv)
 		}
 
-		all := &InventoryRecord{
-			Platform: pltfrm,
-			Channel:  &Channel{Name: "all"},
-		}
-
-		ids := make(map[string]bool)
 		for _, channel := range repo.Channels[pltfrm] {
 			for _, entryId := range channel.EntryIds {
 				ids[entryId.String()] = true
 			}
+		}
+	}
+
+	for pltfrm := range repo.Packages {
+		all := &InventoryRecord{
+			Platform: pltfrm,
+			Channel:  &Channel{Name: "all"},
 		}
 
 		for _, pkg := range repo.Packages[pltfrm] {

@@ -119,7 +119,11 @@ func (p *Packages) Entries(channel string) ([]*Entry, error) {
 
 	chn, err := p.meta.Channels.Get(channel)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, storm.ErrNotFound) {
+			return nil, err
+		} else {
+			return entries, nil
+		}
 	}
 
 	for _, entry := range entries {
