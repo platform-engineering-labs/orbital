@@ -54,6 +54,9 @@ var RepoContents = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if rp == nil {
+			return fmt.Errorf("repo: %s not found", cmd.Flags().Arg(0))
+		}
 
 		inventory := rp.Inventory()
 		for _, pltfrm := range rp.Platforms() {

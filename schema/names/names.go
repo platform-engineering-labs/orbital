@@ -3,7 +3,7 @@ package names
 const (
 	ConfigFile = "ops.conf.pkl"
 
-	OpkgFile   = "OpkgFile"
+	OpkgFile   = "Opkgfile"
 	OpkgTarget = "dist"
 
 	Cache    = "cache"
