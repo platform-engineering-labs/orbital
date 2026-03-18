@@ -23,6 +23,7 @@ import (
 	"github.com/naegelejd/go-acl/os/group"
 	"github.com/platform-engineering-labs/orbital/action"
 	pltfrm "github.com/platform-engineering-labs/orbital/platform"
+	pos "github.com/platform-engineering-labs/orbital/platform/os"
 )
 
 type SymLinkUnix struct {
@@ -63,7 +64,7 @@ func (s *SymLinkUnix) install(ctx context.Context) error {
 	// Silent failures are fine, only a super user can chown to another user
 	// Also a given user may not exist on a system though we should catch
 	// that elsewhere
-	if platform.OS == "all" && pltfrm.Current().OS == "darwin" && s.symlink.Group == "root" {
+	if platform.OS == pos.All && pltfrm.Current().OS == pos.Darwin && s.symlink.Group == "root" {
 		s.symlink.Group = "admin"
 	}
 
@@ -113,7 +114,7 @@ func (s *SymLinkUnix) pkg(ctx context.Context) error {
 
 	if s.symlink.Group == "" {
 		if options.Secure {
-			if platform.OS == "darwin" {
+			if platform.OS == pos.Darwin {
 				s.symlink.Group = "admin"
 			} else {
 				s.symlink.Group = "root"

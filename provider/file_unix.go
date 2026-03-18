@@ -25,6 +25,7 @@ import (
 	"github.com/platform-engineering-labs/orbital/action"
 	opayload "github.com/platform-engineering-labs/orbital/opkg/payload"
 	pltfrm "github.com/platform-engineering-labs/orbital/platform"
+	pos "github.com/platform-engineering-labs/orbital/platform/os"
 )
 
 type FileUnix struct {
@@ -92,7 +93,7 @@ func (f *FileUnix) install(ctx context.Context) error {
 	// Silent failures are fine, only a super user can chown to another user
 	// Also a given user may not exist on a system though we should catch
 	// that elsewhere
-	if platform.OS == "all" && pltfrm.Current().OS == "darwin" && f.file.Group == "root" {
+	if platform.OS == pos.All && pltfrm.Current().OS == pos.Darwin && f.file.Group == "root" {
 		f.file.Group = "admin"
 	}
 
@@ -144,7 +145,7 @@ func (f *FileUnix) pkg(ctx context.Context) error {
 
 	if f.file.Group == "" {
 		if options.Secure {
-			if platform.OS == "darwin" {
+			if platform.OS == pos.Darwin {
 				f.file.Group = "admin"
 			} else {
 				f.file.Group = "root"
