@@ -743,7 +743,7 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 		}
 		certPem = []byte(certEnv)
 
-		keyEnv, exists := os.LookupEnv(cert)
+		keyEnv, exists := os.LookupEnv(key)
 		if !exists {
 			return fmt.Errorf("missing key: %s", key)
 		}
