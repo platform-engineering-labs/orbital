@@ -89,6 +89,11 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 		tree:   tr,
 	}
 
+	err := orb.Init()
+	if err != nil {
+		return nil, err
+	}
+
 	orb.Cache = &Cache{logger, orb}
 	orb.Opkg = &Opkg{logger, orb}
 	orb.Pki = &Pki{logger, orb}
@@ -96,11 +101,6 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 	orb.Repo = &Repo{logger, orb}
 	orb.Transaction = &Transaction{logger, orb}
 	orb.Tree = &Tree{logger, orb}
-
-	err := orb.Init()
-	if err != nil {
-		return nil, err
-	}
 
 	return orb, nil
 }

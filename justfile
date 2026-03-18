@@ -1,7 +1,7 @@
 export VERSION := `git describe --tags --abbrev=0 | cut -c 2-`
 GITHUB := env("GITHUB_ACTIONS", "false")
 
-default: clean setup build
+default: clean build setup
 
 clean:
 	rm -rf ./dist
@@ -20,7 +20,7 @@ tidy:
 setup:
    {{ if GITHUB != "false" { "dist/bin/ops setup" } else {""} }}
 
-pkg: build
+pkg: build setup
     dist/bin/ops opkg build --secure
 
 publish: pkg
