@@ -339,7 +339,7 @@ type TreeEmbedded struct {
 }
 
 func (t *TreeEmbedded) Cache() *cache.Cache {
-	return t.Cache()
+	return t.cache
 }
 
 func (t *TreeEmbedded) Config() *Config {
