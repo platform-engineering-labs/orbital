@@ -37,6 +37,7 @@ func init() {
 	Root.AddCommand(Refresh)
 	Root.AddCommand(Remove)
 	Root.AddCommand(Repo)
+	Root.AddCommand(Setup)
 	Root.AddCommand(Status)
 	Root.AddCommand(Thaw)
 	Root.AddCommand(Transaction)
