@@ -23,6 +23,11 @@ permissions:
   packages: write
   attestations: write
 
+env:
+  OPS_PKG_CRT: ${{ secrets.OPS_PKG_CRT }}
+  OPS_PKG_KEY: ${{ secrets.OPS_PKG_KEY }}
+  OPS_TREE_CONF: ${{ secrets.OPS_TREE_CONF }}
+
 jobs:
   pkg_linux_arm64:
     runs-on: ubuntu-24.04-arm
