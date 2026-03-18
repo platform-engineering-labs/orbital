@@ -89,11 +89,6 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 		tree:   tr,
 	}
 
-	err := orb.Init()
-	if err != nil {
-		return nil, err
-	}
-
 	orb.Cache = &Cache{logger, orb}
 	orb.Opkg = &Opkg{logger, orb}
 	orb.Pki = &Pki{logger, orb}
@@ -105,18 +100,70 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 	return orb, nil
 }
 
-func (o *Orbital) Init() error {
-	if o.config.Mode == config.DynamicMode {
+func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Mode = config.DynamicMode
+
+	err = Init(cfg.Mode, cfg.TreeRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	orb, err := New(logger, cfg, tr)
+	if err != nil {
+		return nil, fmt.Errorf("error: %s", err)
+	}
+
+	return orb, nil
+}
+
+func Embedded(logger *slog.Logger, treePath string, treeConfig *tree.Config) (*Orbital, error) {
+	cfg := &config.Config{
+		Mode:     config.EmbeddedMode,
+		TreeRoot: treePath,
+	}
+
+	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded, treeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	orb, err := New(logger, cfg, tr)
+	if err != nil {
+		return nil, fmt.Errorf("error: %s", err)
+	}
+
+	return orb, nil
+}
+
+func Init(mode config.Mode, root string) error {
+	if mode == config.DynamicMode {
 		_ = os.MkdirAll(paths.ConfigDefault(), 0750)
 		_ = os.MkdirAll(paths.DataDefault(), 0750)
 
-		err := tree.CreateDefault(o.config.TreeRoot)
+		err := tree.CreateDefault(root)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (o *Orbital) getContext(phase string, options *provider.Options) context.Context {
+	ctx := context.WithValue(context.Background(), "phase", phase)
+	ctx = context.WithValue(ctx, "options", options)
+
+	return ctx
 }
 
 func (o *Orbital) Contents(pkg string) (action.Actions, error) {
@@ -584,53 +631,6 @@ func (o *Orbital) Update(packages ...string) error {
 	tr := opm.NewTransaction(o.Logger, o.tree.Current().Path, o.tree.Cache(), o.tree.State())
 
 	return tr.Realize(solution)
-}
-
-func (o *Orbital) getContext(phase string, options *provider.Options) context.Context {
-	ctx := context.WithValue(context.Background(), "phase", phase)
-	ctx = context.WithValue(ctx, "options", options)
-
-	return ctx
-}
-
-func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
-	cfg, err := config.Load(cfgPath)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Mode = config.DynamicMode
-
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	orb, err := New(logger, cfg, tr)
-	if err != nil {
-		return nil, fmt.Errorf("error: %s", err)
-	}
-
-	return orb, nil
-}
-
-func Embedded(logger *slog.Logger, treePath string, treeConfig *tree.Config) (*Orbital, error) {
-	cfg := &config.Config{
-		Mode:     config.EmbeddedMode,
-		TreeRoot: treePath,
-	}
-
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded, treeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	orb, err := New(logger, cfg, tr)
-	if err != nil {
-		return nil, fmt.Errorf("error: %s", err)
-	}
-
-	return orb, nil
 }
 
 func (c *Cache) Clean() error {
