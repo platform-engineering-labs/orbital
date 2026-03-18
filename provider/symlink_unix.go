@@ -22,6 +22,7 @@ import (
 
 	"github.com/naegelejd/go-acl/os/group"
 	"github.com/platform-engineering-labs/orbital/action"
+	pltfrm "github.com/platform-engineering-labs/orbital/platform"
 )
 
 type SymLinkUnix struct {
@@ -51,6 +52,7 @@ func (s *SymLinkUnix) Realize(ctx context.Context) error {
 
 func (s *SymLinkUnix) install(ctx context.Context) error {
 	options := Opts(ctx)
+	platform := Platform(ctx)
 	target := path.Join(options.TargetPath, s.symlink.Path)
 
 	err := os.Symlink(s.symlink.Target, target)
@@ -61,6 +63,9 @@ func (s *SymLinkUnix) install(ctx context.Context) error {
 	// Silent failures are fine, only a super user can chown to another user
 	// Also a given user may not exist on a system though we should catch
 	// that elsewhere
+	if platform.OS == "all" && pltfrm.Current().OS == "darwin" && s.symlink.Group == "root" {
+		s.symlink.Group = "admin"
+	}
 
 	owner, _ := user.Lookup(s.symlink.Owner)
 	grp, _ := user.LookupGroup(s.symlink.Group)
@@ -79,6 +84,7 @@ func (s *SymLinkUnix) install(ctx context.Context) error {
 
 func (s *SymLinkUnix) pkg(ctx context.Context) error {
 	options := Opts(ctx)
+	platform := Platform(ctx)
 	target := path.Join(options.TargetPath, s.symlink.Path)
 
 	info, err := os.Lstat(target)
@@ -107,7 +113,11 @@ func (s *SymLinkUnix) pkg(ctx context.Context) error {
 
 	if s.symlink.Group == "" {
 		if options.Secure {
-			s.symlink.Group = "root"
+			if platform.OS == "darwin" {
+				s.symlink.Group = "admin"
+			} else {
+				s.symlink.Group = "root"
+			}
 		} else if options.Group != "" {
 			s.symlink.Group = options.Group
 		} else {

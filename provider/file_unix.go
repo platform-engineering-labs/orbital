@@ -24,6 +24,7 @@ import (
 	"github.com/naegelejd/go-acl/os/group"
 	"github.com/platform-engineering-labs/orbital/action"
 	opayload "github.com/platform-engineering-labs/orbital/opkg/payload"
+	pltfrm "github.com/platform-engineering-labs/orbital/platform"
 )
 
 type FileUnix struct {
@@ -55,6 +56,7 @@ func (f *FileUnix) Realize(ctx context.Context) error {
 
 func (f *FileUnix) install(ctx context.Context) error {
 	options := Opts(ctx)
+	platform := Platform(ctx)
 	payload := ctx.Value("payload").(*opayload.Reader)
 
 	target := path.Join(options.TargetPath, f.file.Path)
@@ -90,6 +92,9 @@ func (f *FileUnix) install(ctx context.Context) error {
 	// Silent failures are fine, only a super user can chown to another user
 	// Also a given user may not exist on a system though we should catch
 	// that elsewhere
+	if platform.OS == "all" && pltfrm.Current().OS == "darwin" && f.file.Group == "root" {
+		f.file.Group = "admin"
+	}
 
 	owner, _ := user.Lookup(f.file.Owner)
 	grp, _ := user.LookupGroup(f.file.Group)
@@ -109,6 +114,7 @@ func (f *FileUnix) install(ctx context.Context) error {
 
 func (f *FileUnix) pkg(ctx context.Context) error {
 	options := Opts(ctx)
+	platform := Platform(ctx)
 	payload := ctx.Value("payload").(*opayload.Writer)
 
 	target := path.Join(options.TargetPath, f.file.Path)
@@ -138,7 +144,11 @@ func (f *FileUnix) pkg(ctx context.Context) error {
 
 	if f.file.Group == "" {
 		if options.Secure {
-			f.file.Group = "root"
+			if platform.OS == "darwin" {
+				f.file.Group = "admin"
+			} else {
+				f.file.Group = "root"
+			}
 		} else if options.Group != "" {
 			f.file.Group = options.Group
 		} else {

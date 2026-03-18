@@ -23,7 +23,7 @@ type opkgFile struct{}
 func (opkg opkgFile) Load(path string, pltfrm *platform.Platform) (*ops.Manifest, string, error) {
 	manifest := &ops.Manifest{}
 	if pltfrm == nil {
-		pltfrm = platform.Current()
+		return nil, "", fmt.Errorf("platform cannot be nil")
 	}
 
 	var err error

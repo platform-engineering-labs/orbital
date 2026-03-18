@@ -1,0 +1,10 @@
+amends "orbital:/opkg.pkl"
+
+import "pkl:semver"
+
+name = "orbital"
+version =  semver.Version(read("env:VERSION"))
+publisher = "platform.engineering"
+license = "Apache 2.0"
+summary = "ops - the orbital package system"
+description = "ops the last package manager you will ever need"

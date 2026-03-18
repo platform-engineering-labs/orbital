@@ -202,6 +202,7 @@ func (t *Transaction) install(pkg *ops.Header) error {
 	// Setup context
 	ctx := context.WithValue(context.Background(), "options", &provider.Options{TargetPath: t.targetPath})
 	ctx = context.WithValue(ctx, "phase", phase.INSTALL)
+	ctx = context.WithValue(ctx, "platform", pkg.Platform())
 	ctx = context.WithValue(ctx, "payload", reader.Payload)
 
 	// Provider Factory
@@ -266,7 +267,7 @@ func (t *Transaction) remove(pkg *ops.Header) error {
 				return err
 			}
 		}
-		
+
 		// Remove from the package db
 		err = t.state.Packages.Del(pkg.Name)
 		if err != nil {

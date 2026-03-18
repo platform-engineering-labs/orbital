@@ -41,6 +41,7 @@ func NewBuilder(log *slog.Logger) *Builder {
 	builder.version = Version
 
 	builder.options = &provider.Options{}
+	builder.platform = platform.Current()
 
 	builder.manifest = &ops.Manifest{}
 
@@ -202,10 +203,11 @@ func (b *Builder) resolve() error {
 // Completes manifest, builds payload
 func (b *Builder) realize() error {
 	var err error
-
+	
 	// Setup context
 	ctx := context.WithValue(context.Background(), "options", b.options)
 	ctx = context.WithValue(ctx, "phase", phase.PACKAGE)
+	ctx = context.WithValue(ctx, "platform", b.platform)
 	ctx = context.WithValue(ctx, "payload", b.payload)
 
 	factory := provider.DefaultFactory(b.log)

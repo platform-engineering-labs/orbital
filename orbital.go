@@ -692,6 +692,7 @@ func (o *Opkg) Extract(opkgPath, targetPath string) error {
 
 	options := &provider.Options{TargetPath: targetPath}
 	ctx := o.orb.getContext(phase.INSTALL, options)
+	ctx = context.WithValue(ctx, "platform", reader.Manifest.Platform())
 	ctx = context.WithValue(ctx, "payload", reader.Payload)
 
 	factory := provider.DefaultFactory(o.Logger)

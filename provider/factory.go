@@ -7,6 +7,7 @@ import (
 	"github.com/platform-engineering-labs/orbital/action"
 	"github.com/platform-engineering-labs/orbital/action/actions"
 	"github.com/platform-engineering-labs/orbital/opm/phase"
+	"github.com/platform-engineering-labs/orbital/platform"
 )
 
 type Factory struct {
@@ -52,6 +53,10 @@ func Phase(ctx context.Context) string {
 
 func Opts(ctx context.Context) *Options {
 	return ctx.Value("options").(*Options)
+}
+
+func Platform(ctx context.Context) *platform.Platform {
+	return ctx.Value("platform").(*platform.Platform)
 }
 
 func DefaultFactory(log *slog.Logger) *Factory {
