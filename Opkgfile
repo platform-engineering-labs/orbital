@@ -1,5 +1,6 @@
 amends "orbital:/opkg.pkl"
 
+import "orbital:/requirement.pkl"
 import "pkl:semver"
 
 name = "orbital"
@@ -7,4 +8,12 @@ version =  semver.Version(read("env:VERSION"))
 publisher = "platform.engineering"
 license = "Apache 2.0"
 summary = "ops - the orbital package system"
-description = "ops the last package manager you will ever need"
+description = "ops - when you need to ship to the universe"
+
+requirements = new Listing<requirement.Requirement> {
+  new {
+    name = "pkl"
+    method = "depends"
+    operator = "ANY"
+  }
+}

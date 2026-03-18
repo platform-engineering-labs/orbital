@@ -8,6 +8,6 @@ typealias Operator = "ANY"|"GTE"|"LTE"|"EQ"|"EXQ"
 class Requirement {
   name: String
   method: Method
-  Operator: Operator
-  Version: semver.Version
+  operator: Operator
+  version: semver.Version?
 }
