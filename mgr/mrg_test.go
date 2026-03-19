@@ -6,17 +6,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/goforj/godump"
 	"github.com/platform-engineering-labs/orbital/opm/security"
 	"github.com/platform-engineering-labs/orbital/opm/tree"
 	"github.com/platform-engineering-labs/orbital/ops"
 	"github.com/platform-engineering-labs/orbital/platform"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMgr(t *testing.T) {
 	repo, _ := url.Parse("https://hub.platform.engineering/repos/platform.engineering/pel#stable")
 
-	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), "/opt/pel", &tree.Config{
+	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), "/Users/discountelf/.pel/ops/trees/default", &tree.Config{
 		OS:       platform.Current().OS,
 		Arch:     platform.Current().Arch,
 		Security: security.Default,
@@ -33,5 +33,10 @@ func TestMgr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.False(t, mgr.Ready())
+	available, err := mgr.Available()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	godump.Dump(available)
 }

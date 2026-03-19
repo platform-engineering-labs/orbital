@@ -507,6 +507,7 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 		if !md.Exists() {
 			continue
 		}
+		defer md.Close()
 
 		// TODO Validate signature
 
