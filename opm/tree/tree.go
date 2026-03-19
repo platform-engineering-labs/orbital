@@ -319,6 +319,7 @@ func (t *TreeDynamic) Switch(name string) error {
 }
 
 func (t *TreeDynamic) Unlock() error {
+	defer os.Remove(t.lock.Path())
 	return t.lock.Unlock()
 }
 
@@ -453,6 +454,7 @@ func (t *TreeEmbedded) Switch(_ string) error {
 }
 
 func (t *TreeEmbedded) Unlock() error {
+	defer os.Remove(t.lock.Path())
 	return t.lock.Unlock()
 }
 
