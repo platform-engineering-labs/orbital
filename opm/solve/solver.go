@@ -32,8 +32,9 @@ func (s *Solver) Solve(request *Request) (*Solution, error) {
 	s.addClauses()
 
 	satisfiable, s.satSolutions = s.solver.Satisfiable()
+	
 	if satisfiable == false {
-		return nil, errors.New("zps.solver: No solution for requested jobs")
+		return nil, errors.New("ops.solver: No solution for requested jobs")
 	}
 
 	s.generateSolutions()
@@ -97,7 +98,6 @@ func (s *Solver) addReqClauses(pkg *ops.Header) {
 
 			for _, candidate := range provides {
 				clause = append(clause, sat.NewVariable(candidate.Id().String()))
-
 				// recurse if candidate has not been processed
 				if s.seen[candidate.Id().String()] {
 					continue
@@ -112,7 +112,7 @@ func (s *Solver) addReqClauses(pkg *ops.Header) {
 			for index, provided := range provides {
 				current := index + 1
 				for current <= len(provides)-1 {
-					if provided.Id() != provides[current].Id() {
+					if provided.Id().String() != provides[current].Id().String() {
 						s.solver.AddClause(sat.NewVariable(provided.Id().String()).Not(), sat.NewVariable(provides[current].Id().String()).Not())
 					}
 					current++

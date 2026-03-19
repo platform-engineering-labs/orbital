@@ -262,7 +262,7 @@ func (o *Orbital) Install(packages ...string) error {
 		}
 
 		if len(pool.WhatProvides(req)) == 0 {
-			return errors.New(fmt.Sprint("no isntall candidates found for: ", name))
+			return errors.New(fmt.Sprint("no install candidates found for: ", name))
 		}
 
 		request.Install(req)

@@ -40,7 +40,7 @@ func (s *S3Fetcher) Fetch(pkg *ops.Header) error {
 	cacheFile := s.cache.GetFile(pkg.FileName())
 
 	// Download package if not in cache
-	if !s.cache.Exists(cacheFile) {
+	if !s.cache.Exists(pkg.FileName()) {
 		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0640)
 		if err != nil {
 			return err

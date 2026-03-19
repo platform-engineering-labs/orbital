@@ -33,7 +33,7 @@ func (h *HTTPSFetcher) Fetch(pkg *ops.Header) error {
 	cacheFile := h.cache.GetFile(pkg.FileName())
 
 	// Download package if not in cache
-	if !h.cache.Exists(cacheFile) {
+	if !h.cache.Exists(pkg.FileName()) {
 		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0640)
 		if err != nil {
 			return err

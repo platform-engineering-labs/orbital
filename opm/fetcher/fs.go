@@ -38,7 +38,7 @@ func (f *FsFetcher) Fetch(pkg *ops.Header) error {
 	defer os.Remove(lock.Path())
 
 	// Copy package if not in cache
-	if !f.cache.Exists(cacheFile) {
+	if !f.cache.Exists(pkg.FileName()) {
 		src, err := os.Open(repoFile)
 		if err != nil {
 			return err
