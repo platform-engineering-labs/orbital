@@ -61,6 +61,10 @@ func (m *Manager) Install(packages ...string) error {
 	return m.orb.Install(packages...)
 }
 
+func (m *Manager) List() ([]*records.Package, error) {
+	return m.orb.List()
+}
+
 func (m *Manager) Ready() bool {
 	return m.orb.Ready()
 }
