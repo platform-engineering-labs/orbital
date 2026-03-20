@@ -410,7 +410,7 @@ func (o *Orbital) Refresh() error {
 
 		err = ftchr.Refresh()
 		if err == nil {
-			o.Logger.Info(fmt.Sprintf("refreshed: %s", r.SafeUri()))
+			o.Logger.Debug(fmt.Sprintf("refreshed: %s", r.SafeUri()))
 		} else if strings.Contains(err.Error(), "no trusted certificates") {
 			o.Error(fmt.Sprintf("metadata validation failed: %s", r.SafeUri()))
 		} else if strings.Contains(err.Error(), "refresh failed") {
