@@ -229,7 +229,7 @@ func (t *TreeDynamic) Init(name string, pltfrm *platform.Platform, force bool) (
 		}
 	}
 
-	err := os.MkdirAll(filepath.Join(t.root, name, names.TreeDataDir), 0750)
+	err := os.MkdirAll(filepath.Join(t.root, name, names.TreeDataDir), 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (t *TreeEmbedded) Init(_ string, _ *platform.Platform, force bool) (*Entry,
 		Name:     filepath.Base(t.root),
 		Path:     t.root,
 		Platform: platform.Current(),
-	}, os.MkdirAll(filepath.Join(t.root, names.TreeDataDir), 0750)
+	}, os.MkdirAll(filepath.Join(t.root, names.TreeDataDir), 0755)
 }
 
 func (t *TreeEmbedded) List() ([]*Entry, error) {
