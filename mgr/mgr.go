@@ -57,8 +57,8 @@ func (m *Manager) Initialize() (*tree.Entry, error) {
 	return entry, nil
 }
 
-func (m *Manager) Install(name string) error {
-	return m.orb.Install(name)
+func (m *Manager) Install(packages ...string) error {
+	return m.orb.Install(packages...)
 }
 
 func (m *Manager) Ready() bool {
@@ -69,10 +69,10 @@ func (m *Manager) Refresh() error {
 	return m.orb.Refresh()
 }
 
-func (m *Manager) Remove(name string) error {
-	return m.orb.Remove(name)
+func (m *Manager) Remove(packages ...string) error {
+	return m.orb.Remove(packages...)
 }
 
-func (m *Manager) Update(name string) error {
-	return m.orb.Update(name)
+func (m *Manager) Update(packages ...string) error {
+	return m.orb.Update(packages...)
 }
