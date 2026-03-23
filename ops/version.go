@@ -82,7 +82,7 @@ func (v *Version) Compare(ve *Version) int {
 		return -1
 	}
 
-	if v.Timestamp.After(ve.Timestamp) {
+	if v.Timestamp.After(ve.Timestamp) && !ve.Timestamp.IsZero() {
 		return 1
 	}
 
@@ -99,6 +99,7 @@ func (v *Version) Compare(ve *Version) int {
 
 func (v *Version) EQ(ve *Version) bool {
 	compare := v.Compare(ve)
+	
 	return compare == 0 || compare == 2
 }
 

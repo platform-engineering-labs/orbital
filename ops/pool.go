@@ -109,7 +109,7 @@ func (p *Pool) WhatDepends(name string) Headers {
 
 func (p *Pool) WhatProvides(req *Requirement) Headers {
 	var provides Headers
-
+	
 	if _, ok := p.index[req.Name]; ok {
 		for _, candidate := range p.index[req.Name] {
 			// Exact equality will never satisfy provides for frozen entries
