@@ -32,7 +32,6 @@ import (
 	"github.com/platform-engineering-labs/orbital/platform"
 	"github.com/platform-engineering-labs/orbital/provider"
 	"github.com/platform-engineering-labs/orbital/schema/paths"
-	"github.com/platform-engineering-labs/orbital/sys"
 )
 
 type Orbital struct {
@@ -117,17 +116,6 @@ func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
 	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic, nil)
 	if err != nil {
 		return nil, err
-	}
-	
-	if tr.Current().Privileged && !sys.IsPrivilegedUser() {
-		if !sys.SudoSessionActive() {
-			logger.Warn(fmt.Sprintf("ops must run as a privileged user for path: %s", tr.Current().Path))
-		}
-
-		err := sys.InvokeSelfWithSudo()
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	orb, err := New(logger, cfg, tr)
