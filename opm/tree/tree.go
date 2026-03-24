@@ -472,6 +472,9 @@ func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool) (*ops.Po
 }
 
 func (t *TreeEmbedded) Ready() bool {
+	if privileged(t.root) && !sys.IsPrivilegedUser() {
+		return false
+	}
 	return filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir))
 }
 
