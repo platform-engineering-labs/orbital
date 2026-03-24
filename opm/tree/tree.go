@@ -587,8 +587,12 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 }
 
 func privileged(root string) bool {
+	if !filepathx.FileExists(root) {
+		root = filepath.Dir(root)
+	}
+
 	stat, _ := os.Stat(root)
-	if stat == nil {
+	if stat != nil {
 		if stat.Sys().(*syscall.Stat_t).Uid != 0 {
 			return false
 		}
