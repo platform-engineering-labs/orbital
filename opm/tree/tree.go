@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/platform-engineering-labs/orbital/opm/cache"
@@ -158,6 +159,7 @@ func (t *TreeDynamic) Config() *Config {
 
 func (t *TreeDynamic) Current() *Entry {
 	current, _ := os.Readlink(filepath.Join(t.root, names.TreeCurrent))
+
 	if current == "" {
 		current = filepath.Join(t.root, names.TreeDefault)
 		_ = t.Switch(names.TreeDefault)
@@ -167,6 +169,7 @@ func (t *TreeDynamic) Current() *Entry {
 		Name:     filepath.Base(current),
 		Path:     current,
 		Platform: t.platform,
+		Current:  true,
 	}
 }
 
@@ -174,7 +177,16 @@ func (t *TreeDynamic) Get(name string) (*Entry, error) {
 	path := filepath.Join(t.root, name)
 
 	if !filepathx.FileExists(path) {
-		return nil, fmt.Errorf("%s does not exist: at %s", name, path)
+		binPath, _ := os.Executable()
+		if binPath != "" && !strings.HasPrefix(binPath, t.root) && strings.HasSuffix(filepath.Dir(filepath.Dir(binPath)), name) {
+			if filepathx.FileExists(filepath.Join(filepath.Dir(filepath.Dir(binPath)), names.TreeDataDir)) {
+				path = filepath.Dir(filepath.Dir(binPath))
+			} else {
+				return nil, fmt.Errorf("%s does not exist: at %s", name, path)
+			}
+		} else {
+			return nil, fmt.Errorf("%s does not exist: at %s", name, path)
+		}
 	}
 
 	cfg, err := Load(filepath.Join(path, names.TreeDataDir, names.TreeConfigFile))
@@ -272,6 +284,23 @@ func (t *TreeDynamic) List() ([]*Entry, error) {
 		}
 	}
 
+	// Allow management of tree outside of root for current binary
+	binPath, _ := os.Executable()
+	if binPath != "" && !strings.HasPrefix(binPath, t.root) {
+		extRoot := filepath.Dir(filepath.Dir(binPath))
+
+		if filepathx.FileExists(filepath.Join(extRoot, names.TreeDataDir)) {
+			cfg, _ := Load(filepath.Join(extRoot, names.TreeDataDir, names.TreeConfigFile))
+
+			trees = append(trees, &Entry{
+				Name:     filepath.Base(extRoot),
+				Path:     extRoot,
+				Platform: cfg.Platform(),
+				Current:  current.Name == filepath.Base(extRoot),
+			})
+		}
+	}
+
 	return trees, nil
 }
 
@@ -288,7 +317,7 @@ func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool) (*ops.Poo
 }
 
 func (t *TreeDynamic) Ready() bool {
-	return filepathx.FileExists(filepath.Join(t.root, t.Current().Name, names.TreeDataDir))
+	return filepathx.FileExists(filepath.Join(t.Current().Path, names.TreeDataDir))
 }
 
 func (t *TreeDynamic) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {
@@ -310,7 +339,13 @@ func (t *TreeDynamic) StateToRepo() (*ops.Repository, error) {
 func (t *TreeDynamic) Switch(name string) error {
 	_ = os.Remove(filepath.Join(t.root, names.TreeCurrent))
 
-	err := os.Symlink(filepath.Join(t.root, name), filepath.Join(t.root, names.TreeCurrent))
+	path := filepath.Join(t.root, name)
+	binPath, _ := os.Executable()
+	if binPath != "" && !strings.HasPrefix(binPath, t.root) && strings.HasSuffix(filepath.Dir(filepath.Dir(binPath)), name) {
+		path = filepath.Dir(filepath.Dir(binPath))
+	}
+
+	err := os.Symlink(path, filepath.Join(t.root, names.TreeCurrent))
 	if err != nil {
 		return err
 	}
