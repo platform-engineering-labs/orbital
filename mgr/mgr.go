@@ -65,6 +65,10 @@ func (m *Manager) List() ([]*records.Package, error) {
 	return m.orb.List()
 }
 
+func (m *Manager) Privileged() bool {
+	return m.orb.Privileged()
+}
+
 func (m *Manager) Ready() bool {
 	return m.orb.Ready()
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/gofrs/flock"
 	"github.com/platform-engineering-labs/orbital/opm/cache"
@@ -18,6 +19,7 @@ import (
 	"github.com/platform-engineering-labs/orbital/platform"
 	"github.com/platform-engineering-labs/orbital/schema/names"
 	"github.com/platform-engineering-labs/orbital/schema/paths"
+	"github.com/platform-engineering-labs/orbital/sys"
 	"github.com/platform-engineering-labs/orbital/x/collections"
 	filepathx "github.com/platform-engineering-labs/orbital/x/filepath"
 )
@@ -52,7 +54,8 @@ type Entry struct {
 	Path     string
 	Platform *platform.Platform
 
-	Current bool
+	Current    bool
+	Privileged bool
 }
 
 type Type string
@@ -166,10 +169,11 @@ func (t *TreeDynamic) Current() *Entry {
 	}
 
 	return &Entry{
-		Name:     filepath.Base(current),
-		Path:     current,
-		Platform: t.platform,
-		Current:  true,
+		Name:       filepath.Base(current),
+		Path:       current,
+		Platform:   t.platform,
+		Current:    true,
+		Privileged: privileged(t.root),
 	}
 }
 
@@ -317,6 +321,9 @@ func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool) (*ops.Poo
 }
 
 func (t *TreeDynamic) Ready() bool {
+	if privileged(t.root) && !sys.IsPrivilegedUser() {
+		return false
+	}
 	return filepathx.FileExists(filepath.Join(t.Current().Path, names.TreeDataDir))
 }
 
@@ -383,7 +390,7 @@ func (t *TreeEmbedded) Config() *Config {
 }
 
 func (t *TreeEmbedded) Current() *Entry {
-	return &Entry{Name: filepath.Base(t.root), Path: t.root}
+	return &Entry{Name: filepath.Base(t.root), Path: t.root, Current: true, Privileged: privileged(t.root)}
 }
 
 func (t *TreeEmbedded) Destroy(name string) (*Entry, error) {
@@ -577,6 +584,17 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 	}
 
 	return nil
+}
+
+func privileged(root string) bool {
+	stat, _ := os.Stat(root)
+	if stat == nil {
+		if stat.Sys().(*syscall.Stat_t).Uid != 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func stateToRepo(tree Tree) (*ops.Repository, error) {
