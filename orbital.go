@@ -245,7 +245,9 @@ func (o *Orbital) Install(packages ...string) error {
 	}
 	defer o.tree.Unlock()
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	packages, repos, err := opm.ReqsReposFromNames(packages)
+
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false, repos...)
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,7 @@ type Tree interface {
 	Lock() error
 	Unlock() error
 	Pki() *pki.Pki
-	Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error)
+	Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error)
 	RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error
 	Security() security.Security
 	State() *state.State
@@ -339,8 +339,8 @@ func (t *TreeDynamic) Pki() *pki.Pki {
 	return t.pki
 }
 
-func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
-	return pool(t, platforms, empty)
+func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
+	return pool(t, platforms, empty, repos...)
 }
 
 func (t *TreeDynamic) Ready() bool {
@@ -490,8 +490,8 @@ func (t *TreeEmbedded) Pki() *pki.Pki {
 	return t.pki
 }
 
-func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
-	return pool(t, platforms, empty)
+func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
+	return pool(t, platforms, empty, repos...)
 }
 
 func (t *TreeEmbedded) Ready() bool {
@@ -526,9 +526,7 @@ func (t *TreeEmbedded) Unlock() error {
 	return t.lock.Unlock()
 }
 
-func pool(tree Tree, platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
-	var repos []*ops.Repository
-
+func pool(tree Tree, platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
 	for _, repo := range tree.Config().Repositories {
 		if repo.Enabled {
 			err := tree.RepoLoad(platforms, &repo, false)

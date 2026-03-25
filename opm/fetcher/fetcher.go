@@ -33,6 +33,8 @@ func New(log *slog.Logger, cache *cache.Cache, sec security.Security, repo *ops.
 	}
 
 	switch Type(repo.Uri.Scheme) {
+	case File:
+		return NewFileFetcher(fetch), nil
 	case Fs:
 		return NewFsFetcher(fetch), nil
 	case HTTPS:

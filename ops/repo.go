@@ -50,6 +50,14 @@ func NewRepo(uri url.URL, enabled bool, priority int) *Repository {
 	}
 }
 
+func (repo *Repository) Add(headers ...*Header) {
+	sort.Sort(Headers(headers))
+
+	for _, header := range headers {
+		repo.Packages[header.Platform()] = append(repo.Packages[header.Platform()], header)
+	}
+}
+
 func (repo *Repository) Inventory() Inventory {
 	var inventory Inventory
 	ids := make(map[string]bool)
