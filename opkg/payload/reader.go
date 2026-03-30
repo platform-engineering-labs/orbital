@@ -71,6 +71,7 @@ func (r *Reader) Get(path string, offset int64, size int64) (string, error) {
 
 	_ = writer.Flush()
 	_ = target.Close()
+	zstdReader.Close()
 
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
