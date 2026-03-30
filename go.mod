@@ -21,7 +21,7 @@ require (
 	github.com/zps-io/sat v0.0.0-20190412034122-acaa8fa26246
 	go.etcd.io/bbolt v1.4.3
 	gonum.org/v1/gonum v0.17.0
-	resty.dev/v3 v3.0.0-beta.6
+	resty.dev/v3 v3.0.0-beta.6.0.20260127085140-f531c9de7027
 )
 
 require (

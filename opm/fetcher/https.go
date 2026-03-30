@@ -3,6 +3,7 @@ package fetcher
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"time"
@@ -47,14 +48,21 @@ func (h *HTTPSFetcher) Fetch(pkg *ops.Header) error {
 
 		// Download
 		resp, err := h.client.R().
-			SetOutputFileName(cacheFile).
+			SetTimeout(time.Duration(240) * time.Second).
+			SetDoNotParseResponse(true).
 			Get(fileUri.String())
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("error connecting to: %s", h.repo.Uri.Host))
 		}
 
-		if resp.IsError() {
+		defer resp.RawResponse.Body.Close()
+		_, err = io.Copy(dst, resp.RawResponse.Body)
+		if err != nil {
+			return errors.New(fmt.Sprintf("error downloading file: %s", h.repo.Uri.Host))
+		}
+
+		if resp.IsStatusFailure() {
 			os.Remove(cacheFile)
 
 			switch resp.StatusCode() {
@@ -97,7 +105,7 @@ func (h *HTTPSFetcher) Refresh() error {
 			return errors.New(fmt.Sprintf("error connecting to: %s", h.repo.Uri.Host))
 		}
 
-		if resp.IsError() {
+		if resp.IsStatusFailure() {
 			os.Remove(h.cache.GetMeta(pltfrm.String(), h.repo.SafeUri()))
 			switch resp.StatusCode() {
 			case 404:

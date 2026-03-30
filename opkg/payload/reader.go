@@ -53,7 +53,7 @@ func (r *Reader) Get(path string, offset int64, size int64) (string, error) {
 
 	var zstdReader *zstd.Decoder
 
-	zstdReader, err = zstd.NewReader(reader, zstd.WithDecoderConcurrency(0))
+	zstdReader, err = zstd.NewReader(reader, zstd.WithDecoderConcurrency(1))
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +94,7 @@ func (r *Reader) Verify(offset int64, size int64) (string, error) {
 
 	var zstdReader *zstd.Decoder
 
-	zstdReader, err = zstd.NewReader(reader, zstd.WithDecoderConcurrency(0))
+	zstdReader, err = zstd.NewReader(reader, zstd.WithDecoderConcurrency(1))
 	if err != nil {
 		return "", err
 	}
