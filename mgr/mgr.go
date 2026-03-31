@@ -43,6 +43,14 @@ func (m *Manager) Available() (map[string]*records.Status, error) {
 	return available, nil
 }
 
+func (m *Manager) Clear() error {
+	return m.orb.Cache.Clear()
+}
+
+func (m *Manager) Clean() error {
+	return m.orb.Cache.Clean()
+}
+
 func (m *Manager) Initialize() (*tree.Entry, error) {
 	entry, err := m.orb.Tree.Init("", nil, false)
 	if err != nil {
