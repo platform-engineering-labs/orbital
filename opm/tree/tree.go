@@ -591,6 +591,7 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 		})
 
 		channels, err := md.Channels.Entries()
+		
 		if err != nil {
 			return err
 		}

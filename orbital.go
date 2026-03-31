@@ -1003,7 +1003,7 @@ func (p *Publish) Publish(repo string, workPath string, opkgFiles []string, chan
 		return nil, nil, err
 	}
 
-	if len(channels) > 0 && rp.Uri.Fragment != "" {
+	if len(channels) == 0 && rp.Uri.Fragment != "" {
 		channels = append(channels, rp.Uri.Fragment)
 	}
 
@@ -1048,7 +1048,7 @@ func (r *Repo) Contents(repoName string, all bool) (*ops.Repository, error) {
 			if err != nil {
 				return nil, err
 			}
-
+			
 			return &repo, nil
 		}
 	}

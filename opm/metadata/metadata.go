@@ -311,7 +311,6 @@ func (p *Packages) Reject(entry *Entry) bool {
 }
 
 func (p *Packages) PutAll(pkgs []*ops.Header, channels []string) (saved, pruned []*Entry, err error) {
-
 	for _, pkg := range pkgs {
 		entry, err := p.Put(pkg)
 		if err != nil {
