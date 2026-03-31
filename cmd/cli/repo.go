@@ -63,7 +63,9 @@ var RepoContents = &cobra.Command{
 			fmt.Printf("%s\n", pltfrm.String())
 			for _, inv := range inventory {
 				if inv.Platform == pltfrm {
-					fmt.Printf("  %s\n", inv.Channel.Name)
+					if len(inv.Packages) > 0 {
+						fmt.Printf("  %s\n", inv.Channel.Name)
+					}
 					for _, header := range inv.Packages {
 						fmt.Printf("   %s\n", header.Id().String())
 					}
