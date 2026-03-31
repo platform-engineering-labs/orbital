@@ -64,7 +64,7 @@ func (opkg opkgFile) Load(path string, pltfrm *platform.Platform) (*ops.Manifest
 	}
 
 	// Set the Time in the manifest version
-	manifest.Version.Timestamp = time.Now()
+	manifest.Version.Timestamp = time.Now().UTC()
 
 	return manifest, path, nil
 }
