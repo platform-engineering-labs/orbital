@@ -257,7 +257,7 @@ func (t *TreeDynamic) Init(name string, pltfrm *platform.Platform, force bool) (
 
 	path := filepath.Join(t.root, name)
 
-	if filepathx.FileExists(path) && !force {
+	if filepathx.FileExists(filepath.Join(path, names.TreeDataDir)) && !force {
 		return nil, fmt.Errorf("%s already exists: %s", name, path)
 	}
 
@@ -453,7 +453,7 @@ func (t *TreeEmbedded) Init(_ string, _ *platform.Platform, force bool) (*Entry,
 		return nil, fmt.Errorf("error: tree root should not be empty")
 	}
 
-	if filepathx.FileExists(t.root) && !force {
+	if filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir)) && !force {
 		return nil, fmt.Errorf("already exists: %s", t.root)
 	}
 
