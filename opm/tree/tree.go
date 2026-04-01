@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/asdine/storm"
 	"github.com/gofrs/flock"
 	"github.com/platform-engineering-labs/orbital/opm/cache"
 	"github.com/platform-engineering-labs/orbital/opm/metadata"
@@ -590,11 +592,25 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 			return entry.Header
 		})
 
-		channels, err := md.Channels.Entries()
-		
-		if err != nil {
-			return err
+		var channels []*metadata.Channel
+		if all {
+			channels, err = md.Channels.Entries()
+			if err != nil {
+				return err
+			}
+		} else {
+			chn, err := md.Channels.Get(channel)
+			if err != nil {
+				if !errors.Is(storm.ErrNotFound, err) {
+					return err
+				}
+			}
+
+			if chn != nil {
+				channels = append(channels, chn)
+			}
 		}
+
 		repoChans := collections.Map(channels, func(entry *metadata.Channel) *ops.Channel {
 			return &ops.Channel{
 				Name:     entry.Name,

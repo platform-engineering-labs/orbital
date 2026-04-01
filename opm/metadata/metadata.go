@@ -122,7 +122,7 @@ func (p *Packages) Entries(channel string) ([]*Entry, error) {
 		if !errors.Is(err, storm.ErrNotFound) {
 			return nil, err
 		} else {
-			return entries, nil
+			return []*Entry{}, nil
 		}
 	}
 
