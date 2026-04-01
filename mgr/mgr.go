@@ -1,6 +1,7 @@
 package mgr
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/platform-engineering-labs/orbital"
@@ -39,6 +40,21 @@ func (m *Manager) Available() (map[string]*records.Status, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	return available, nil
+}
+
+func (m *Manager) AvailableFor(name string) (*records.Status, error) {
+	var available *records.Status
+
+	available, err := m.orb.Status(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(available.Available) == 0 {
+		return nil, fmt.Errorf("no available packages for: %s", name)
 	}
 
 	return available, nil
