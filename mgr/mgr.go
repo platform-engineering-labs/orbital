@@ -11,9 +11,10 @@ import (
 
 type Manager struct {
 	*slog.Logger
-	path string
-	cfg  *tree.Config
-	orb  *orbital.Orbital
+	Path string
+
+	cfg *tree.Config
+	orb *orbital.Orbital
 }
 
 func New(log *slog.Logger, path string, cfg *tree.Config) (*Manager, error) {
@@ -57,7 +58,7 @@ func (m *Manager) Initialize() (*tree.Entry, error) {
 		return nil, err
 	}
 
-	m.orb, err = orbital.Embedded(m.Logger, m.path, m.cfg)
+	m.orb, err = orbital.Embedded(m.Logger, m.Path, m.cfg)
 	if err != nil {
 		return nil, err
 	}
