@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/platform-engineering-labs/orbital/opm/candidate"
+	"github.com/platform-engineering-labs/orbital/ops"
 )
 
 type Status struct {
@@ -24,4 +25,22 @@ func (s *Status) HasUpdate() (bool, *Package) {
 	} else {
 		return false, nil
 	}
+}
+
+func (s *Status) HasVersion(version *ops.Version) (bool, *Package) {
+	s.Sort()
+
+	var result *Package
+	for _, pkg := range s.Available {
+		if pkg.Version.EXQ(version) {
+			result = pkg
+			break
+		}
+		if pkg.Version.EQ(version) {
+			result = pkg
+			break
+		}
+	}
+
+	return result != nil, result
 }
