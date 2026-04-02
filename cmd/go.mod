@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/log v1.0.0
 	github.com/goforj/godump v1.9.1
 	github.com/platform-engineering-labs/orbital v0.0.0-00010101000000-000000000000
+	github.com/platform-engineering-labs/pelx v0.1.2
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -49,7 +50,7 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20260205113103-524a6607adb8 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
-	github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444 // indirect
+	github.com/charmbracelet/x/exp/charmtone v0.0.0-20260330094520-2dce04b6f8a4 // indirect
 	github.com/charmbracelet/x/exp/ordered v0.1.0 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240722160745-212f7b056ed0 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect

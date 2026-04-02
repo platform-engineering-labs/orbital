@@ -84,8 +84,8 @@ github.com/charmbracelet/x/conpty v0.1.1 h1:s1bUxjoi7EpqiXysVtC+a8RrvPPNcNvAjfi4
 github.com/charmbracelet/x/conpty v0.1.1/go.mod h1:OmtR77VODEFbiTzGE9G1XiRJAga6011PIm4u5fTNZpk=
 github.com/charmbracelet/x/errors v0.0.0-20240508181413-e8d8b6e2de86 h1:JSt3B+U9iqk37QUU2Rvb6DSBYRLtWqFqfxf8l5hOZUA=
 github.com/charmbracelet/x/errors v0.0.0-20240508181413-e8d8b6e2de86/go.mod h1:2P0UgXMEa6TsToMSuFqKFQR+fZTO9CNGUNokkPatT/0=
-github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444 h1:IJDiTgVE56gkAGfq0lBEloWgkXMk4hl/bmuPoicI4R0=
-github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444/go.mod h1:T9jr8CzFpjhFVHjNjKwbAD7KwBNyFnj2pntAO7F2zw0=
+github.com/charmbracelet/x/exp/charmtone v0.0.0-20260330094520-2dce04b6f8a4 h1:pIj18ZCZO4WOVj7jwjLoUb1lC7rS/I8oC3fZWXugNaY=
+github.com/charmbracelet/x/exp/charmtone v0.0.0-20260330094520-2dce04b6f8a4/go.mod h1:nsExn0DGyX0lh9LwLHTn2Gg+hafdzfSXnC+QmEJTZFY=
 github.com/charmbracelet/x/exp/golden v0.0.0-20250806222409-83e3a29d542f h1:pk6gmGpCE7F3FcjaOEKYriCvpmIN4+6OS/RD0vm4uIA=
 github.com/charmbracelet/x/exp/golden v0.0.0-20250806222409-83e3a29d542f/go.mod h1:IfZAMTHB6XkZSeXUqriemErjAWCCzT0LwjKFYCZyw0I=
 github.com/charmbracelet/x/exp/ordered v0.1.0 h1:55/qLwjIh0gL0Vni+QAWk7T/qRVP6sBf+2agPBgnOFE=
@@ -155,6 +155,8 @@ github.com/muesli/termenv v0.16.0 h1:S5AlUN9dENB57rsbnkPyfdGuWIlkmzJjbFf0Tf5FWUc
 github.com/muesli/termenv v0.16.0/go.mod h1:ZRfOIKPFDYQoDFF4Olj7/QJbW60Ol/kL1pU3VfY/Cnk=
 github.com/naegelejd/go-acl v0.0.0-20260323030528-42e4d61407df h1:1xWk/De6cs3h2rv2LZA/jcLFTmEGD9EluHsKaYq+Gm0=
 github.com/naegelejd/go-acl v0.0.0-20260323030528-42e4d61407df/go.mod h1:sTJHuiEPB0WNdPYPOP9M6FQU4YTHemXgDLIQqkbBdDI=
+github.com/platform-engineering-labs/pelx v0.1.2 h1:4SzttlJIg357KBcbxjwn+rseOlD9vWbJV76V/U1ZUcI=
+github.com/platform-engineering-labs/pelx v0.1.2/go.mod h1:FI3miJ1HwfsSl9MLXbGT2/lKMx8Z8UMLg5Z3P6REfqo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
