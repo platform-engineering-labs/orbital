@@ -6,6 +6,7 @@ We package and deliver like UPS trucks.
 
 Every package system in existence is too hard to use and too painful to deal with. We want to fix that.
 If you just want to ship a filesystem wrapped in a cryptographically verifiable archive you are in the right place.
+Orbital is a reboot of [ZPS](https://zps.io) a project that was never fully realized.
 
 ## Why
 
