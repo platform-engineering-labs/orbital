@@ -102,7 +102,7 @@ func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 
 		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
 			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required for path: %s", tr.Current().Path))
+				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
 			}
 
 			err := sys.InvokeSelfWithSudo()
@@ -132,7 +132,7 @@ func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 
 		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
 			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required for path: %s", tr.Current().Path))
+				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
 			}
 
 			err := sys.InvokeSelfWithSudo()
