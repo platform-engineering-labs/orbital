@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/log v1.0.0
 	github.com/goforj/godump v1.9.1
 	github.com/platform-engineering-labs/orbital v0.0.0-00010101000000-000000000000
-	github.com/platform-engineering-labs/pelx v0.1.2
+	github.com/platform-engineering-labs/pelx v0.1.3
 	github.com/spf13/cobra v1.10.2
 )
 
