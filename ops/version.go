@@ -35,12 +35,27 @@ func (v *Version) Parse(version string) error {
 	v.Major = sv.Major
 	v.Minor = sv.Minor
 	v.Patch = sv.Patch
+	v.PreRelease = serializePre(sv.Pre)
+	v.Build = strings.Join(sv.Build, ".")
 
 	if len(split) == 2 {
 		v.Timestamp, err = time.Parse("20060102T150405Z", split[1])
 	}
 
 	return err
+}
+
+// serializePre joins a semver pre-release identifier list into the canonical
+// dot-separated form ("dev.1", "rc.4", etc.).
+func serializePre(pre []semver.PRVersion) string {
+	if len(pre) == 0 {
+		return ""
+	}
+	parts := make([]string, len(pre))
+	for i, p := range pre {
+		parts[i] = p.String()
+	}
+	return strings.Join(parts, ".")
 }
 
 func (v *Version) MarshalJSON() ([]byte, error) {
@@ -57,11 +72,24 @@ func (v *Version) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Version) Semver() semver.Version {
-	return semver.Version{
+	sv := semver.Version{
 		Major: v.Major,
 		Minor: v.Minor,
 		Patch: v.Patch,
 	}
+	if v.PreRelease != "" {
+		for _, p := range strings.Split(v.PreRelease, ".") {
+			pr, err := semver.NewPRVersion(p)
+			if err != nil {
+				continue
+			}
+			sv.Pre = append(sv.Pre, pr)
+		}
+	}
+	if v.Build != "" {
+		sv.Build = strings.Split(v.Build, ".")
+	}
+	return sv
 }
 
 func (v *Version) Short() string {
