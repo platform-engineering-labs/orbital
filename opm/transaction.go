@@ -274,10 +274,16 @@ func (t *Transaction) remove(pkg *ops.Header) error {
 			return err
 		}
 
-		// Remove fs objects from fs db
+		// Remove fs objects from fs db. A package may legitimately have no
+		// fs entries (metapackages have no payload, so install never put
+		// anything into Objects under their name). Storm's Del returns
+		// ErrNotFound in that case; treat it the same as the Frozen.Del
+		// guard below, since "nothing to remove" isn't a failure.
 		err = t.state.Objects.Del(pkg.Name)
 		if err != nil {
-			return err
+			if !strings.Contains(strings.ToLower(err.Error()), "not found") {
+				return err
+			}
 		}
 
 		// Remove an existing frozen entry
