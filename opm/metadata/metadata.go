@@ -51,7 +51,8 @@ func (m *Metadata) getDb() (*storm.DB, error) {
 	var err error
 
 	if m.db == nil {
-		m.db, err = storm.Open(m.Path, storm.BoltOptions(0600, &bolt.Options{Timeout: 10 * time.Second}))
+		m.db, err = storm.Open(m.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second}))
+		_ = os.Chmod(m.Path, 0644)
 		if err != nil {
 			return nil, err
 		}

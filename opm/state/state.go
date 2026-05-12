@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -93,7 +94,8 @@ func (s *State) getDb() (*storm.DB, error) {
 	var err error
 
 	if s.db == nil {
-		s.db, err = storm.Open(s.Path, storm.BoltOptions(0600, &bolt.Options{Timeout: 10 * time.Second}))
+		s.db, err = storm.Open(s.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second}))
+		_ = os.Chmod(s.Path, 0644)
 		if err != nil {
 			return nil, err
 		}

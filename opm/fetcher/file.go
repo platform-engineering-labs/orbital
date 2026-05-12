@@ -34,7 +34,7 @@ func (f *FileFetcher) Fetch(pkg *ops.Header) error {
 		}
 		defer src.Close()
 
-		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0640)
+		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}

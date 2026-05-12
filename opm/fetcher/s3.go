@@ -41,7 +41,7 @@ func (s *S3Fetcher) Fetch(pkg *ops.Header) error {
 
 	// Download package if not in cache
 	if !s.cache.Exists(pkg.FileName()) {
-		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0640)
+		dst, err := os.OpenFile(cacheFile, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (s *S3Fetcher) Fetch(pkg *ops.Header) error {
 
 func (s *S3Fetcher) Refresh() error {
 	for _, pltfrm := range platform.SupportedPlatforms {
-		dst, err := os.OpenFile(s.cache.GetMeta(pltfrm.String(), s.repo.SafeUri()), os.O_RDWR|os.O_CREATE, 0640)
+		dst, err := os.OpenFile(s.cache.GetMeta(pltfrm.String(), s.repo.SafeUri()), os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
