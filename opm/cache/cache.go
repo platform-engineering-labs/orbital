@@ -15,7 +15,8 @@ type Cache struct {
 }
 
 func New(path string) *Cache {
-	_ = os.MkdirAll(path, 0750)
+	_ = os.MkdirAll(path, 0755)
+	_ = os.Chmod(path, 0755)
 	return &Cache{path, sha256.New()}
 }
 
