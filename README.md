@@ -10,8 +10,9 @@ Orbital is a reboot of [ZPS](https://zps.io) a project that was never fully real
 
 ## Why
 
-- NIX is too complex, build systems should not be tightly coupled to package systems
-- Everything else was designed for 1970 and it shows
+- The usability of recent solutions is constrained by complexity
+- Most other systems have co-mingled the transport functionality with the build system
+- Everything else is mired in technical debt easily eliminated with modern advancements
 
 ## Notable features
 
