@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -329,6 +330,13 @@ func (t *TreeDynamic) List() ([]*Entry, error) {
 				Current:  current.Name == filepath.Base(extRoot),
 			})
 		}
+	}
+
+	if !slices.ContainsFunc(
+		trees, func(tree *Entry) bool {
+			return tree.Path == current.Path
+		}) {
+		trees = append(trees, current)
 	}
 
 	return trees, nil
