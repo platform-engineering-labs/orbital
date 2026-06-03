@@ -40,3 +40,31 @@ func TestMgr(t *testing.T) {
 
 	godump.Dump(available)
 }
+
+func TestMgrAvailableSimple(t *testing.T) {
+	repo, _ := url.Parse("https://hub.platform.engineering/repos/platform.engineering/pel#stable")
+
+	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), "/Users/discountelf/.pel/ops/trees/default", &tree.Config{
+		OS:       platform.Current().OS,
+		Arch:     platform.Current().Arch,
+		Security: security.Default,
+		Repositories: []ops.Repository{
+			{
+				Uri:      *repo,
+				Priority: 0,
+				Enabled:  true,
+				Prune:    0,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	available, err := mgr.AvailableForSimple("orbital")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	godump.Dump(available)
+}

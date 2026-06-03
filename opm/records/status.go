@@ -12,10 +12,9 @@ type Status struct {
 	Available []*Package
 }
 
-func (s *Status) Sort() {
-	sort.Slice(s.Available, func(i, j int) bool {
-		return s.Available[i].Version.GT(s.Available[j].Version)
-	})
+type SimpleStatus struct {
+	Installed *Package
+	Available []*Package
 }
 
 func (s *Status) HasUpdate() (bool, *Package) {
@@ -43,4 +42,10 @@ func (s *Status) HasVersion(version *ops.Version) (bool, *Package) {
 	}
 
 	return result != nil, result
+}
+
+func (s *Status) Sort() {
+	sort.Slice(s.Available, func(i, j int) bool {
+		return s.Available[i].Version.GT(s.Available[j].Version)
+	})
 }
