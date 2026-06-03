@@ -315,12 +315,13 @@ func (t *TreeDynamic) List() ([]*Entry, error) {
 
 	// Allow management of tree outside of root for current binary
 	binPath, _ := os.Executable()
-	if binPath != "" && !strings.HasPrefix(binPath, t.root) {
-		extRoot := filepath.Dir(filepath.Dir(binPath))
+	binPathFinal, _ := filepath.EvalSymlinks(binPath)
+
+	if binPathFinal != "" && !strings.HasPrefix(binPathFinal, t.root) {
+		extRoot := filepath.Dir(filepath.Dir(binPathFinal))
 
 		if filepathx.FileExists(filepath.Join(extRoot, names.TreeDataDir)) {
 			cfg, _ := Load(filepath.Join(extRoot, names.TreeDataDir, names.TreeConfigFile))
-
 			trees = append(trees, &Entry{
 				Name:     filepath.Base(extRoot),
 				Path:     extRoot,
