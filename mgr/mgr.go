@@ -60,6 +60,32 @@ func (m *Manager) AvailableFor(name string) (*records.Status, error) {
 	return available, nil
 }
 
+func (m *Manager) AvailableForSimple(name string) (*records.SimpleStatus, error) {
+	available, err := m.AvailableFor(name)
+	if err != nil {
+		return nil, err
+	}
+
+	simple := &records.SimpleStatus{}
+
+	for i := range available.Available {
+		if available.Available[i].Installed == true {
+			simple.Installed = available.Available[i]
+			continue
+		}
+
+		if i > 0 {
+			if available.Available[i-1].Version.EQ(available.Available[i].Version) {
+				continue
+			} else {
+				simple.Available = append(simple.Available, available.Available[i])
+			}
+		}
+	}
+
+	return simple, nil
+}
+
 func (m *Manager) Clear() error {
 	return m.orb.Cache.Clear()
 }
