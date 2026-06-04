@@ -34,5 +34,35 @@ Orbital is a reboot of [ZPS](https://zps.io) a project that was never fully real
   - Publish to S3
   - Fetch from HTTPS/S3
 
+## Installation
+
+```sh
+bash -c "$(curl -fsSL https://hub.platform.engineering/get/setup.sh)" -- install orbital
+```
+
+- Ensure that `/opt/pel/bin` is in your shell $PATH
+- Add the following to `/opt/pel/.ops/tree.pkl` to work with other repositories FOR EXAMPLE:
+```pkl
+amends "orbital:/tree.pkl"
+
+repositories = new Listing<Repository> {
+  // Platform Engineering Labs tools repository  
+  new {
+    uri = "https://hub.platform.engineering/repos/platform.engineering/pel#stable"
+  }
+
+  // Formae hub community repository  
+  new {
+    uri = "https://hub.platform.engineering/repos/platform.engineering/community#stable"
+  }
+}
+```
+
+**Try it!** 
+
+- run `ops refresh`
+- run `ops list`
+- run `ops install formae`
+
 ## License
 Apache 2.0
