@@ -15,7 +15,7 @@ var Update = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
 		if err != nil {
 			return err
 		}

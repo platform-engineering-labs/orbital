@@ -32,10 +32,14 @@ import (
 	"github.com/platform-engineering-labs/orbital/platform"
 	"github.com/platform-engineering-labs/orbital/provider"
 	"github.com/platform-engineering-labs/orbital/schema/paths"
+	"github.com/platform-engineering-labs/orbital/sys"
 )
 
 type Orbital struct {
 	*slog.Logger
+
+	writeable bool
+	sudo      bool
 
 	config *config.Config
 	tree   tree.Tree
@@ -82,11 +86,45 @@ type Tree struct {
 	orb *Orbital
 }
 
-func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error) {
+func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 	orb := &Orbital{
 		Logger: logger,
-		config: cfg,
-		tree:   tr,
+	}
+
+	for _, opt := range opts {
+		err := opt(orb)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if orb.tree == nil && orb.config != nil {
+		err := Init(orb.config.Mode, orb.config.TreeRoot)
+		if err != nil {
+			return nil, err
+		}
+
+		orb.tree, err = tree.New(logger, orb.config.TreeRoot, tree.Dynamic, nil)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("orbital: WithConfig must be passed for dynamic mode")
+	}
+
+	if orb.tree.Current().Privileged && !sys.IsPrivilegedUser() {
+		if orb.sudo {
+			if !sys.SudoSessionActive() {
+				orb.Logger.Warn(fmt.Sprintf("privileged user required to manage path: %s", orb.tree.Current().Path))
+			}
+
+			err := sys.InvokeSelfWithSudo()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("privileged user required to manage path: %s", orb.tree.Current().Path)
+		}
 	}
 
 	orb.Cache = &Cache{logger, orb}
@@ -96,51 +134,6 @@ func New(logger *slog.Logger, cfg *config.Config, tr tree.Tree) (*Orbital, error
 	orb.Repo = &Repo{logger, orb}
 	orb.Transaction = &Transaction{logger, orb}
 	orb.Tree = &Tree{logger, orb}
-
-	return orb, nil
-}
-
-func Dynamic(logger *slog.Logger, cfgPath string) (*Orbital, error) {
-	cfg, err := config.Load(cfgPath)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Mode = config.DynamicMode
-
-	err = Init(cfg.Mode, cfg.TreeRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Dynamic, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	orb, err := New(logger, cfg, tr)
-	if err != nil {
-		return nil, fmt.Errorf("error: %s", err)
-	}
-
-	return orb, nil
-}
-
-func Embedded(logger *slog.Logger, treePath string, treeConfig *tree.Config) (*Orbital, error) {
-	cfg := &config.Config{
-		Mode:     config.EmbeddedMode,
-		TreeRoot: treePath,
-	}
-
-	tr, err := tree.New(logger, cfg.TreeRoot, tree.Embedded, treeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	orb, err := New(logger, cfg, tr)
-	if err != nil {
-		return nil, fmt.Errorf("error: %s", err)
-	}
 
 	return orb, nil
 }
@@ -1048,7 +1041,7 @@ func (r *Repo) Contents(repoName string, all bool) (*ops.Repository, error) {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			return &repo, nil
 		}
 	}

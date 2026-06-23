@@ -101,17 +101,6 @@ func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 			Arch: tr.cfg.Arch,
 		}
 
-		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
-			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
-			}
-
-			err := sys.InvokeSelfWithSudo()
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if tr.Ready() {
 			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
 			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
@@ -130,17 +119,6 @@ func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 		tr := &TreeEmbedded{Logger: log, root: root, platform: platform.Current()}
 
 		tr.cfg = cfg
-
-		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
-			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
-			}
-
-			err := sys.InvokeSelfWithSudo()
-			if err != nil {
-				return nil, err
-			}
-		}
 
 		if tr.Ready() {
 			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
@@ -355,7 +333,7 @@ func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool, repos ...
 }
 
 func (t *TreeDynamic) Ready() bool {
-	if privileged(t.root) && !sys.IsPrivilegedUser() {
+	if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
 		return false
 	}
 	return filepathx.FileExists(filepath.Join(t.Current().Path, names.TreeDataDir))
@@ -506,7 +484,7 @@ func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool, repos ..
 }
 
 func (t *TreeEmbedded) Ready() bool {
-	if privileged(t.root) && !sys.IsPrivilegedUser() {
+	if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
 		return false
 	}
 	return filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir))

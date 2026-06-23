@@ -31,7 +31,7 @@ var Publish = &cobra.Command{
 			return fmt.Errorf("must specify at least one package to publish")
 		}
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
 		if err != nil {
 			return err
 		}

@@ -19,7 +19,7 @@ type Manager struct {
 }
 
 func New(log *slog.Logger, path string, cfg *tree.Config) (*Manager, error) {
-	orb, err := orbital.Embedded(log, path, cfg)
+	orb, err := orbital.New(log, orbital.WithEmbedded(path, cfg), orbital.WithSudo())
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (m *Manager) Initialize() (*tree.Entry, error) {
 		return nil, err
 	}
 
-	m.orb, err = orbital.Embedded(m.Logger, m.Path, m.cfg)
+	m.orb, err = orbital.New(m.Logger, orbital.WithEmbedded(m.Path, m.cfg), orbital.WithSudo())
 	if err != nil {
 		return nil, err
 	}
