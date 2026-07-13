@@ -18,8 +18,8 @@ type Manager struct {
 	orb *orbital.Orbital
 }
 
-func New(log *slog.Logger, path string, cfg *tree.Config) (*Manager, error) {
-	orb, err := orbital.New(log, orbital.WithEmbedded(path, cfg), orbital.WithSudo())
+func New(log *slog.Logger, opts ...orbital.Option) (*Manager, error) {
+	orb, err := orbital.New(log, opts...)
 	if err != nil {
 		return nil, err
 	}
