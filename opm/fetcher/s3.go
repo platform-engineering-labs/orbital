@@ -97,7 +97,7 @@ func (s *S3Fetcher) Refresh() error {
 		defer dst.Close()
 
 		if s.sec.Mode() != security.None {
-			metaData := metadata.New(s.cache.GetMeta(pltfrm.String(), s.repo.SafeUri()), s.repo.Prune)
+			metaData := metadata.New(s.cache.GetMeta(pltfrm.String(), s.repo.SafeUri()), false, s.repo.Prune)
 			defer metaData.Close()
 
 			_, err := s.sec.VerifyMetadata(metaData, *s.repo.Publisher())

@@ -15,13 +15,12 @@ type Security interface {
 	Mode() Mode
 	VerifyManifest(manifest *ops.Manifest) ([]*VerifyResult, error)
 	VerifyMetadata(metadata *metadata.Metadata, publisher string) ([]*VerifyResult, error)
-	KeyPair(publisher string) (*pki.KeyPairEntry, error)
 	Refresh() error
 	Resolve(ski string, publisher string) (*pki.CertEntry, error)
 	Trust(content *[]byte) (*CertMetadata, error)
 }
 
-func New(log *slog.Logger, mode Mode, store *pki.Pki) (Security, error) {
+func New(log *slog.Logger, mode Mode, store *pki.Trust) (Security, error) {
 	// Short circuit for none
 	if mode == None {
 		return &SecurityNone{}, nil

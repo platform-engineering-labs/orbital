@@ -21,7 +21,7 @@ var Plan = &cobra.Command{
 			return fmt.Errorf("must specify an action and at least one package to plan")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}

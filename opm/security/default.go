@@ -19,7 +19,7 @@ const (
 
 type SecurityDefault struct {
 	*slog.Logger
-	pki *pki.Pki
+	trust *pki.Trust
 
 	caCache           *x509.CertPool
 	intermediateCache *x509.CertPool
@@ -27,19 +27,6 @@ type SecurityDefault struct {
 
 func (s *SecurityDefault) Mode() Mode {
 	return Default
-}
-
-func (s *SecurityDefault) KeyPair(publisher string) (*pki.KeyPairEntry, error) {
-	pairs, err := s.pki.KeyPairs.GetByPublisher(publisher)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(pairs) > 0 {
-		return pairs[0], nil
-	}
-
-	return nil, nil
 }
 
 func (s *SecurityDefault) Trust(content *[]byte) (*CertMetadata, error) {
@@ -60,7 +47,7 @@ func (s *SecurityDefault) Trust(content *[]byte) (*CertMetadata, error) {
 		ctype = pki.CertUser
 	}
 
-	err = s.pki.Certificates.Put(metaData.SKI, metaData.Fingerprint, metaData.Subject, metaData.Publisher, ctype, *content)
+	err = s.trust.Certificates.Put(metaData.SKI, metaData.Fingerprint, metaData.Subject, metaData.Publisher, ctype, *content)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +56,7 @@ func (s *SecurityDefault) Trust(content *[]byte) (*CertMetadata, error) {
 }
 
 func (s *SecurityDefault) Refresh() error {
-	certs, err := s.pki.Certificates.All()
+	certs, err := s.trust.Certificates.All()
 	if err != nil {
 		return err
 	}
@@ -96,7 +83,7 @@ func (s *SecurityDefault) Refresh() error {
 }
 
 func (s *SecurityDefault) Resolve(ski string, publisher string) (*pki.CertEntry, error) {
-	cert, err := s.pki.Certificates.Get(ski)
+	cert, err := s.trust.Certificates.Get(ski)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +124,7 @@ func (s *SecurityDefault) Resolve(ski string, publisher string) (*pki.CertEntry,
 	}
 	s.Info(fmt.Sprintf("imported: %s - %s", user.Subject, user.SKI))
 
-	return s.pki.Certificates.Get(ski)
+	return s.trust.Certificates.Get(ski)
 }
 
 func (s *SecurityDefault) VerifyManifest(manifest *ops.Manifest) ([]*VerifyResult, error) {

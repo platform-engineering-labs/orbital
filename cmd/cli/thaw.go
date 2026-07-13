@@ -16,7 +16,7 @@ var Thaw = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}

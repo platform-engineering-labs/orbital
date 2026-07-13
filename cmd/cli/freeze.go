@@ -20,7 +20,7 @@ var Freeze = &cobra.Command{
 			return fmt.Errorf("package(s) argument required")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}

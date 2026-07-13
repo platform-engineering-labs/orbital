@@ -44,7 +44,8 @@ type Tree interface {
 	List() ([]*Entry, error)
 	Lock() error
 	Unlock() error
-	Pki() *pki.Pki
+	Signing() *pki.Signing
+	Trust() *pki.Trust
 	Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error)
 	RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error
 	Security() security.Security
@@ -84,12 +85,12 @@ func CreateDefault(root string) error {
 	return tree.Switch(names.TreeDefault)
 }
 
-func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
+func New(log *slog.Logger, root string, t Type, writeable bool, cfg *Config) (Tree, error) {
 	var err error
 
 	switch t {
 	case Dynamic:
-		tr := &TreeDynamic{Logger: log, root: root}
+		tr := &TreeDynamic{Logger: log, root: root, writable: writeable}
 
 		tr.cfg, err = Load(filepath.Join(tr.Current().Path, names.TreeDataDir, names.TreeConfigFile))
 		if err != nil {
@@ -103,34 +104,42 @@ func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
 
 		if tr.Ready() {
 			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+			tr.trust = pki.NewTrust(paths.TreeTrust(tr.Current().Path), !writeable)
 
-			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
+			if writeable {
+				tr.signing = pki.NewSigning(paths.TreeSigning(tr.Current().Path))
+				tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+			}
+
+			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.trust)
 			if err != nil {
 				return nil, err
 			}
 
-			tr.state = state.New(paths.TreeState(tr.Current().Path))
+			tr.state = state.New(paths.TreeState(tr.Current().Path), !writeable)
 		}
 
 		return tr, nil
 	case Embedded:
-		tr := &TreeEmbedded{Logger: log, root: root, platform: platform.Current()}
+		tr := &TreeEmbedded{Logger: log, root: root, platform: platform.Current(), writeable: writeable}
 
 		tr.cfg = cfg
 
 		if tr.Ready() {
 			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+			tr.trust = pki.NewTrust(paths.TreeTrust(tr.Current().Path), !writeable)
 
-			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
+			if writeable {
+				tr.signing = pki.NewSigning(paths.TreeSigning(tr.Current().Path))
+				tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
+			}
+
+			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.trust)
 			if err != nil {
 				return nil, err
 			}
 
-			tr.state = state.New(paths.TreeState(tr.Current().Path))
+			tr.state = state.New(paths.TreeState(tr.Current().Path), !writeable)
 		}
 
 		return tr, nil
@@ -147,12 +156,15 @@ type TreeDynamic struct {
 
 	cfg *Config
 
-	cache *cache.Cache
-	pki   *pki.Pki
-	sec   security.Security
-	state *state.State
+	cache   *cache.Cache
+	signing *pki.Signing
+	trust   *pki.Trust
+	sec     security.Security
+	state   *state.State
 
 	lock *flock.Flock
+
+	writable bool
 }
 
 func (t *TreeDynamic) Cache() *cache.Cache {
@@ -324,8 +336,12 @@ func (t *TreeDynamic) Lock() error {
 	return t.lock.Lock()
 }
 
-func (t *TreeDynamic) Pki() *pki.Pki {
-	return t.pki
+func (t *TreeDynamic) Signing() *pki.Signing {
+	return t.signing
+}
+
+func (t *TreeDynamic) Trust() *pki.Trust {
+	return t.trust
 }
 
 func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
@@ -333,8 +349,10 @@ func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool, repos ...
 }
 
 func (t *TreeDynamic) Ready() bool {
-	if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
-		return false
+	if t.writable {
+		if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
+			return false
+		}
 	}
 	return filepathx.FileExists(filepath.Join(t.Current().Path, names.TreeDataDir))
 }
@@ -385,12 +403,15 @@ type TreeEmbedded struct {
 
 	cfg *Config
 
-	cache *cache.Cache
-	pki   *pki.Pki
-	sec   security.Security
-	state *state.State
+	cache   *cache.Cache
+	signing *pki.Signing
+	trust   *pki.Trust
+	sec     security.Security
+	state   *state.State
 
 	lock *flock.Flock
+
+	writeable bool
 }
 
 func (t *TreeEmbedded) Cache() *cache.Cache {
@@ -475,8 +496,12 @@ func (t *TreeEmbedded) Lock() error {
 	return t.lock.Lock()
 }
 
-func (t *TreeEmbedded) Pki() *pki.Pki {
-	return t.pki
+func (t *TreeEmbedded) Signing() *pki.Signing {
+	return t.signing
+}
+
+func (t *TreeEmbedded) Trust() *pki.Trust {
+	return t.trust
 }
 
 func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
@@ -484,8 +509,10 @@ func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool, repos ..
 }
 
 func (t *TreeEmbedded) Ready() bool {
-	if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
-		return false
+	if t.writeable {
+		if privileged(t.Current().Path) && !sys.IsPrivilegedUser() {
+			return false
+		}
 	}
 	return filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir))
 }
@@ -558,7 +585,7 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 	for _, pltfrm := range platforms {
 		metadataPath := tree.Cache().GetMeta(pltfrm.String(), repo.SafeUri())
 
-		md := metadata.New(metadataPath, repo.Prune)
+		md := metadata.New(metadataPath, true, repo.Prune)
 		if !md.Exists() {
 			continue
 		}

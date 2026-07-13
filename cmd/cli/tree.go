@@ -44,7 +44,7 @@ var TreeDestroy = &cobra.Command{
 			return fmt.Errorf("must specify a name for the ops tree")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ var TreeInit = &cobra.Command{
 			return fmt.Errorf("must specify a name for the ops tree")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ var TreeList = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ var TreeSwitch = &cobra.Command{
 			return fmt.Errorf("must specify a name for the ops tree")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}

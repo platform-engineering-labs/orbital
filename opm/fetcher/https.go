@@ -118,7 +118,7 @@ func (h *HTTPSFetcher) Refresh() error {
 		}
 
 		if h.sec.Mode() != security.None {
-			metaData := metadata.New(h.cache.GetMeta(pltfrm.String(), h.repo.SafeUri()), h.repo.Prune)
+			metaData := metadata.New(h.cache.GetMeta(pltfrm.String(), h.repo.SafeUri()), false, h.repo.Prune)
 			defer metaData.Close()
 
 			_, err := h.sec.VerifyMetadata(metaData, *h.repo.Publisher())

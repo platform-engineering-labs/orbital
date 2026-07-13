@@ -109,7 +109,7 @@ func (f *FsFetcher) Refresh() error {
 		}
 
 		if f.sec.Mode() != security.None {
-			metaData := metadata.New(f.cache.GetMeta(pltfrm.String(), f.repo.SafeUri()), f.repo.Prune)
+			metaData := metadata.New(f.cache.GetMeta(pltfrm.String(), f.repo.SafeUri()), false, f.repo.Prune)
 			defer metaData.Close()
 
 			_, err := f.sec.VerifyMetadata(metaData, *f.repo.Publisher())

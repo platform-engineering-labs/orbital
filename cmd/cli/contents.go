@@ -21,7 +21,7 @@ var Contents = &cobra.Command{
 			return fmt.Errorf("package argument required")
 		}
 
-		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo())
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}

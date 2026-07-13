@@ -104,7 +104,7 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 			return nil, err
 		}
 
-		orb.tree, err = tree.New(logger, orb.config.TreeRoot, tree.Dynamic, nil)
+		orb.tree, err = tree.New(logger, orb.config.TreeRoot, tree.Dynamic, orb.writeable, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -112,18 +112,20 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 		return nil, fmt.Errorf("orbital: WithConfig must be passed for dynamic mode")
 	}
 
-	if orb.tree.Current().Privileged && !sys.IsPrivilegedUser() {
-		if orb.sudo {
-			if !sys.SudoSessionActive() {
-				orb.Logger.Warn(fmt.Sprintf("privileged user required to manage path: %s", orb.tree.Current().Path))
-			}
+	if orb.writeable {
+		if orb.tree.Current().Privileged && !sys.IsPrivilegedUser() {
+			if orb.sudo {
+				if !sys.SudoSessionActive() {
+					orb.Logger.Warn(fmt.Sprintf("privileged user required to manage path: %s", orb.tree.Current().Path))
+				}
 
-			err := sys.InvokeSelfWithSudo()
-			if err != nil {
-				return nil, err
+				err := sys.InvokeSelfWithSudo()
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, fmt.Errorf("privileged user required to manage path: %s", orb.tree.Current().Path)
 			}
-		} else {
-			return nil, fmt.Errorf("privileged user required to manage path: %s", orb.tree.Current().Path)
 		}
 	}
 
@@ -160,12 +162,6 @@ func (o *Orbital) getContext(phase string, options *provider.Options) context.Co
 }
 
 func (o *Orbital) Contents(pkg string) (action.Actions, error) {
-	err := o.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer o.tree.Unlock()
-
 	manifest, err := o.tree.State().Packages.Get(pkg)
 	if err != nil {
 		return nil, err
@@ -212,12 +208,6 @@ func (o *Orbital) Freeze(packages ...string) error {
 }
 
 func (o *Orbital) Info(pkg string) (*ops.Header, error) {
-	err := o.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer o.tree.Unlock()
-
 	manifest, err := o.tree.State().Packages.Get(pkg)
 	if err != nil {
 		return nil, err
@@ -307,12 +297,6 @@ func (o *Orbital) Install(packages ...string) error {
 }
 
 func (o *Orbital) List() (packages []*records.Package, err error) {
-	err = o.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer o.tree.Unlock()
-
 	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
 	if err != nil {
 		return nil, err
@@ -333,12 +317,6 @@ func (o *Orbital) List() (packages []*records.Package, err error) {
 }
 
 func (o *Orbital) Plan(action string, packages ...string) ([]*solve.Operation, error) {
-	err := o.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer o.tree.Unlock()
-
 	if action != phase.INSTALL && action != phase.REMOVE {
 		return nil, errors.New(fmt.Sprintf("invalid action: %s (install/remove supported)", action))
 	}
@@ -466,12 +444,6 @@ func (o *Orbital) Remove(packages ...string) error {
 }
 
 func (o *Orbital) Status(pkg string) (*records.Status, error) {
-	err := o.tree.Lock()
-	if err != nil {
-		return &records.Status{Status: candidate.None}, err
-	}
-	defer o.tree.Unlock()
-
 	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
 	if err != nil {
 		return &records.Status{Status: candidate.None}, err
@@ -654,7 +626,7 @@ func (o *Opkg) Build(manifestPath string, pltfrm *platform.Platform, targetPath 
 		return nil, "", err
 	}
 
-	kp, err := o.orb.tree.Security().KeyPair(manifest.Publisher)
+	kp, err := o.orb.tree.Signing().KeyPairs.FirstByPublisher(manifest.Publisher)
 	if err != nil {
 		return nil, "", err
 	}
@@ -771,7 +743,7 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 		return err
 	}
 
-	kps, err := p.orb.tree.Pki().KeyPairs.GetByPublisher(metadata.Publisher)
+	kps, err := p.orb.tree.Signing().KeyPairs.GetByPublisher(metadata.Publisher)
 	if err != nil {
 		return err
 	}
@@ -785,14 +757,14 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 				),
 			)
 
-			err := p.orb.tree.Pki().KeyPairs.Del(kps[index].SKI)
+			err := p.orb.tree.Signing().KeyPairs.Del(kps[index].SKI)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	err = p.orb.tree.Pki().KeyPairs.Put(metadata.SKI, metadata.Fingerprint, metadata.Subject, metadata.Publisher, certPem, keyPem)
+	err = p.orb.tree.Signing().KeyPairs.Put(metadata.SKI, metadata.Fingerprint, metadata.Subject, metadata.Publisher, certPem, keyPem)
 	if err != nil {
 		return err
 	}
@@ -803,13 +775,7 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 }
 
 func (p *Pki) KeyPairList() ([]*pki.KeyPairEntry, error) {
-	err := p.orb.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer p.orb.tree.Unlock()
-
-	return p.orb.tree.Pki().KeyPairs.All()
+	return p.orb.tree.Signing().KeyPairs.All()
 }
 
 func (p *Pki) KeyPairRemove(ski string) error {
@@ -819,7 +785,7 @@ func (p *Pki) KeyPairRemove(ski string) error {
 	}
 	defer p.orb.tree.Unlock()
 
-	err = p.orb.tree.Pki().KeyPairs.Del(ski)
+	err = p.orb.tree.Signing().KeyPairs.Del(ski)
 	if err != nil {
 		return err
 	}
@@ -866,13 +832,7 @@ func (p *Pki) TrustImportFiles(cert ...string) error {
 }
 
 func (p *Pki) TrustList() ([]*pki.CertEntry, error) {
-	err := p.orb.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer p.orb.tree.Unlock()
-
-	return p.orb.tree.Pki().Certificates.All()
+	return p.orb.tree.Trust().Certificates.All()
 }
 
 func (p *Pki) TrustRefresh() error {
@@ -892,7 +852,7 @@ func (p *Pki) TrustRemove(ski string) error {
 	}
 	defer p.orb.tree.Unlock()
 
-	err = p.orb.tree.Pki().Certificates.Del(ski)
+	err = p.orb.tree.Trust().Certificates.Del(ski)
 	if err != nil {
 		return err
 	}
@@ -908,7 +868,7 @@ func (p *Publish) Channel(repo string, channels []string, id *ops.Id) error {
 		return err
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{}, p.orb.tree.Security(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{}, p.orb.tree.Signing(), rp)
 	if err != nil {
 		return err
 	}
@@ -917,12 +877,6 @@ func (p *Publish) Channel(repo string, channels []string, id *ops.Id) error {
 }
 
 func (p *Publish) Fetch(names []string, pltfrm *platform.Platform) error {
-	err := p.orb.tree.Lock()
-	if err != nil {
-		return err
-	}
-	defer p.orb.tree.Unlock()
-
 	pool, err := p.orb.tree.Pool(platform.Expanded(pltfrm), true)
 	if err != nil {
 		return err
@@ -1000,7 +954,7 @@ func (p *Publish) Publish(repo string, workPath string, opkgFiles []string, chan
 		channels = append(channels, rp.Uri.Fragment)
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Security(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing(), rp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1014,7 +968,7 @@ func (p *Publish) Yank(repo string, pkg string, workPath string) error {
 		return err
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Security(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing(), rp)
 	if err != nil {
 		return err
 	}
@@ -1023,12 +977,6 @@ func (p *Publish) Yank(repo string, pkg string, workPath string) error {
 }
 
 func (r *Repo) Contents(repoName string, all bool) (*ops.Repository, error) {
-	err := r.orb.tree.Lock()
-	if err != nil {
-		return nil, err
-	}
-	defer r.orb.tree.Unlock()
-
 	platforms := platform.SupportedPlatforms
 
 	if !all {
@@ -1055,7 +1003,7 @@ func (r *Repo) Init(repo, workPath string) (uri *url.URL, err error) {
 		return nil, err
 	}
 
-	pub, err := publisher.New(r.Logger, &provider.Options{WorkPath: workPath}, r.orb.tree.Security(), rp)
+	pub, err := publisher.New(r.Logger, &provider.Options{WorkPath: workPath}, r.orb.tree.Signing(), rp)
 	if err != nil {
 		return nil, err
 	}

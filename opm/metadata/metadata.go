@@ -22,6 +22,8 @@ type Metadata struct {
 	Channels   *Channels
 	Signatures *Signatures
 
+	readOnly bool
+
 	db *storm.DB
 }
 
@@ -37,8 +39,8 @@ type Signatures struct {
 	meta *Metadata
 }
 
-func New(path string, prune int) *Metadata {
-	meta := &Metadata{Path: path, Prune: prune}
+func New(path string, readOnly bool, prune int) *Metadata {
+	meta := &Metadata{Path: path, Prune: prune, readOnly: readOnly}
 
 	meta.Channels = &Channels{meta}
 	meta.Packages = &Packages{meta}
@@ -51,7 +53,7 @@ func (m *Metadata) getDb() (*storm.DB, error) {
 	var err error
 
 	if m.db == nil {
-		m.db, err = storm.Open(m.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second}))
+		m.db, err = storm.Open(m.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second, ReadOnly: m.readOnly}))
 		_ = os.Chmod(m.Path, 0644)
 		if err != nil {
 			return nil, err

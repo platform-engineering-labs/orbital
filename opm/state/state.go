@@ -20,7 +20,8 @@ type State struct {
 	Objects      *Objects
 	Transactions *Transactions
 
-	db *storm.DB
+	readOnly bool
+	db       *storm.DB
 }
 
 type Frozen struct {
@@ -63,7 +64,7 @@ type TransactionEntry struct {
 	Date      *time.Time `storm:"index"`
 }
 
-func New(path string) *State {
+func New(path string, readOnly bool) *State {
 	state := &State{Path: path}
 	state.Frozen = &Frozen{state}
 
@@ -73,6 +74,7 @@ func New(path string) *State {
 
 	state.Transactions = &Transactions{state}
 
+	state.readOnly = readOnly
 	return state
 }
 
@@ -94,8 +96,8 @@ func (s *State) getDb() (*storm.DB, error) {
 	var err error
 
 	if s.db == nil {
-		s.db, err = storm.Open(s.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second}))
 		_ = os.Chmod(s.Path, 0644)
+		s.db, err = storm.Open(s.Path, storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second, ReadOnly: s.readOnly}))
 		if err != nil {
 			return nil, err
 		}

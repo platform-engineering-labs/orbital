@@ -30,8 +30,11 @@ func TreeCache(path string) string {
 func TreeLock(path string) string {
 	return filepath.Join(path, names.TreeDataDir, ".lock")
 }
-func TreePki(path string) string {
-	return filepath.Join(path, names.TreeDataDir, names.PkiStore)
+func TreeSigning(path string) string {
+	return filepath.Join(path, names.TreeDataDir, names.PkiSigning)
+}
+func TreeTrust(path string) string {
+	return filepath.Join(path, names.TreeDataDir, names.PkiTrust)
 }
 func TreeState(path string) string {
 	return filepath.Join(path, names.TreeDataDir, names.StateDb)

@@ -29,7 +29,7 @@ func WithEmbedded(path string, cfg *tree.Config) Option {
 			TreeRoot: path,
 		}
 
-		o.tree, err = tree.New(o.Logger, o.config.TreeRoot, tree.Embedded, cfg)
+		o.tree, err = tree.New(o.Logger, o.config.TreeRoot, tree.Embedded, o.writeable, cfg)
 		if err != nil {
 			return err
 		}
