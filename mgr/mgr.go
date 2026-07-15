@@ -12,10 +12,9 @@ import (
 
 type Manager struct {
 	*slog.Logger
-	Path string
 
-	cfg *tree.Config
-	orb *orbital.Orbital
+	orb  *orbital.Orbital
+	opts []orbital.Option
 }
 
 func New(log *slog.Logger, opts ...orbital.Option) (*Manager, error) {
@@ -24,7 +23,7 @@ func New(log *slog.Logger, opts ...orbital.Option) (*Manager, error) {
 		return nil, err
 	}
 
-	return &Manager{log, path, cfg, orb}, nil
+	return &Manager{log, orb, opts}, nil
 }
 
 func (m *Manager) Available() (map[string]*records.Status, error) {
@@ -100,7 +99,7 @@ func (m *Manager) Initialize() (*tree.Entry, error) {
 		return nil, err
 	}
 
-	m.orb, err = orbital.New(m.Logger, orbital.WithEmbedded(m.Path, m.cfg), orbital.WithSudo())
+	m.orb, err = orbital.New(m.Logger, m.opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +114,8 @@ func (m *Manager) Install(packages ...string) error {
 func (m *Manager) List() ([]*records.Package, error) {
 	return m.orb.List()
 }
+
+func (m *Manager) Path() string { return m.orb.Tree.Current().Path }
 
 func (m *Manager) Privileged() bool {
 	return m.orb.Privileged()

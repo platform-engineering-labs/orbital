@@ -98,7 +98,11 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 		}
 	}
 
-	if orb.tree == nil && orb.config != nil {
+	if orb.config == nil {
+		return nil, fmt.Errorf("orbital: WithConfig must be passed for dynamic mode")
+	}
+
+	if orb.config.Mode == config.DynamicMode {
 		err := Init(orb.config.Mode, orb.config.TreeRoot)
 		if err != nil {
 			return nil, err
@@ -108,8 +112,6 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		return nil, fmt.Errorf("orbital: WithConfig must be passed for dynamic mode")
 	}
 
 	if orb.writeable {
