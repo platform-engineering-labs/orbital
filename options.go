@@ -39,6 +39,16 @@ func WithEmbedded(path string, cfg *tree.Config) Option {
 	}
 }
 
+func WithCurrent(path string) Option {
+	return func(o *Orbital) error {
+		var err error
+
+		o.tree, err = tree.New(o.Logger, "$current", path, o.writeable, nil)
+
+		return err
+	}
+}
+
 func WithWritable() Option {
 	return func(o *Orbital) error {
 		o.writeable = true

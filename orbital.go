@@ -42,6 +42,7 @@ type Orbital struct {
 	sudo      bool
 
 	config *config.Config
+	path   string
 	tree   *tree.Tree
 
 	Cache       *Cache
@@ -106,21 +107,23 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 		_ = os.MkdirAll(paths.ConfigDefault(), 0750)
 		_ = os.MkdirAll(paths.DataDefault(), 0750)
 
-		if _, err := tree.Current(); err != nil {
-			err := tree.CreateDefault()
+		if orb.tree == nil {
+			if _, err := tree.Current(); err != nil {
+				err := tree.CreateDefault()
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			current, err := tree.Current()
 			if err != nil {
 				return nil, err
 			}
-		}
 
-		current, err := tree.Current()
-		if err != nil {
-			return nil, err
-		}
-
-		orb.tree, err = tree.New(logger, current.Name, current.Path, orb.writeable, nil)
-		if err != nil {
-			return nil, err
+			orb.tree, err = tree.New(logger, current.Name, current.Path, orb.writeable, nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -1049,7 +1052,11 @@ func (t *Tree) Init(name string, path string, pltfrm *platform.Platform, createC
 		return nil, err
 	}
 
-	return tr, tree.Add(tr)
+	if t.orb.config.Mode == config.DynamicMode {
+		return tr, tree.Add(tr)
+	}
+
+	return tr, nil
 }
 
 func (t *Tree) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
