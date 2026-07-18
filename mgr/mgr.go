@@ -94,7 +94,7 @@ func (m *Manager) Clean() error {
 }
 
 func (m *Manager) Initialize() (*tree.Entry, error) {
-	entry, err := m.orb.Tree.Init("", nil, false)
+	entry, err := m.orb.Tree.Init("$current", m.orb.Tree.Path(), platform.Current(), false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (m *Manager) List() ([]*records.Package, error) {
 	return m.orb.List()
 }
 
-func (m *Manager) Path() string { return m.orb.Tree.Current().Path }
+func (m *Manager) Path() string { return m.orb.Tree.Path() }
 
 func (m *Manager) Privileged() bool {
 	return m.orb.Privileged()

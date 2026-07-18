@@ -42,7 +42,6 @@ type Orbital struct {
 	sudo      bool
 
 	config *config.Config
-	path   string
 	tree   *tree.Tree
 
 	Cache       *Cache
