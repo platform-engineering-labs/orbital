@@ -139,7 +139,7 @@ func (s *S3Publisher) Channel(id *ops.Id, channels []string) error {
 		}
 		defer lock.Unlock()
 
-		metaData := metadata.New(metaPath, s.repo.Prune)
+		metaData := metadata.New(metaPath, false, s.repo.Prune)
 		defer metaData.Close()
 
 		for _, channel := range channels {
@@ -172,7 +172,7 @@ func (s *S3Publisher) Yank(pkg string) error {
 			return err
 		}
 
-		kp, err := s.sec.KeyPair(*s.repo.Publisher())
+		kp, err := s.signing.KeyPairs.FirstByPublisher(*s.repo.Publisher())
 		if err != nil {
 			return err
 		}
@@ -221,7 +221,7 @@ func (s *S3Publisher) Yank(pkg string) error {
 		}
 		defer lock.Unlock()
 
-		metaData := metadata.New(metaPath, s.repo.Prune)
+		metaData := metadata.New(metaPath, false, s.repo.Prune)
 		defer metaData.Close()
 
 		entry, err := metaData.Packages.DelR(pkg)
@@ -285,7 +285,7 @@ func (s *S3Publisher) Publish(pkgs []string, channels []string) (published []str
 		return nil, nil, err
 	}
 
-	kp, err := s.sec.KeyPair(*s.repo.Publisher())
+	kp, err := s.signing.KeyPairs.FirstByPublisher(*s.repo.Publisher())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -353,7 +353,7 @@ func (s *S3Publisher) Publish(pkgs []string, channels []string) (published []str
 				}
 			}
 
-			metaData := metadata.New(metaPath, s.repo.Prune)
+			metaData := metadata.New(metaPath, false, s.repo.Prune)
 			defer metaData.Close()
 
 			entries, pEntries, err := metaData.Packages.PutAll(slices.Collect(maps.Values(current)), channels)

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/platform-engineering-labs/orbital/opkg"
-	"github.com/platform-engineering-labs/orbital/opm/security"
+	"github.com/platform-engineering-labs/orbital/opm/pki"
 	"github.com/platform-engineering-labs/orbital/ops"
 	"github.com/platform-engineering-labs/orbital/provider"
 )
@@ -22,18 +22,18 @@ type Type string
 type Pub struct {
 	*slog.Logger
 
-	repo *ops.Repository
-	sec  security.Security
+	repo    *ops.Repository
+	signing *pki.Signing
 
 	opts *provider.Options
 }
 
-func New(log *slog.Logger, opts *provider.Options, sec security.Security, repo *ops.Repository) (Publisher, error) {
+func New(log *slog.Logger, opts *provider.Options, signing *pki.Signing, repo *ops.Repository) (Publisher, error) {
 	pub := &Pub{
-		Logger: log,
-		repo:   repo,
-		sec:    sec,
-		opts:   opts,
+		Logger:  log,
+		repo:    repo,
+		signing: signing,
+		opts:    opts,
 	}
 
 	switch Type(repo.UriPublish.Scheme) {

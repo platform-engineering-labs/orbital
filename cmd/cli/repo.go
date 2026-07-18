@@ -38,7 +38,15 @@ var RepoContents = &cobra.Command{
 			return fmt.Errorf("repo name is required")
 		}
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		opts := []orbital.Option{
+			orbital.WithConfig(cfgPath),
+		}
+		if refresh {
+			opts = append(opts, orbital.WithSudo())
+			opts = append(opts, orbital.WithWritable())
+		}
+
+		orb, err := orbital.New(slog.New(Logger), opts...)
 		if err != nil {
 			return err
 		}
@@ -90,7 +98,7 @@ var RepoInit = &cobra.Command{
 			return fmt.Errorf("repo name is required")
 		}
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}
@@ -115,7 +123,7 @@ var RepoList = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}

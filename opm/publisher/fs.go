@@ -58,7 +58,7 @@ func (f *FsPublisher) Channel(id *ops.Id, channels []string) error {
 		defer lock.Unlock()
 		defer os.Remove(lock.Path())
 
-		metaData := metadata.New(filepath.Join(path, names.MetaDataDb), f.repo.Prune)
+		metaData := metadata.New(filepath.Join(path, names.MetaDataDb), false, f.repo.Prune)
 		defer metaData.Close()
 
 		for _, channel := range channels {
@@ -78,7 +78,7 @@ func (f *FsPublisher) Publish(pkgs []string, channels []string) (published []str
 		return nil, nil, err
 	}
 
-	kp, err := f.sec.KeyPair(*f.repo.Publisher())
+	kp, err := f.signing.KeyPairs.FirstByPublisher(*f.repo.Publisher())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +102,7 @@ func (f *FsPublisher) Publish(pkgs []string, channels []string) (published []str
 			defer lock.Unlock()
 			defer os.Remove(lock.Path())
 
-			metaData := metadata.New(filepath.Join(f.repo.UriPublish.Path, pltfrm.String(), names.MetaDataDb), f.repo.Prune)
+			metaData := metadata.New(filepath.Join(f.repo.UriPublish.Path, pltfrm.String(), names.MetaDataDb), false, f.repo.Prune)
 			defer metaData.Close()
 
 			entries, pEntries, err := metaData.Packages.PutAll(slices.Collect(maps.Values(current)), channels)
@@ -162,7 +162,7 @@ func (f *FsPublisher) Publish(pkgs []string, channels []string) (published []str
 }
 
 func (f *FsPublisher) Yank(pkg string) error {
-	kp, err := f.sec.KeyPair(*f.repo.Publisher())
+	kp, err := f.signing.KeyPairs.FirstByPublisher(*f.repo.Publisher())
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (f *FsPublisher) Yank(pkg string) error {
 		defer lock.Unlock()
 		defer os.Remove(lock.Path())
 
-		metaData := metadata.New(filepath.Join(path, names.MetaDataDb), f.repo.Prune)
+		metaData := metadata.New(filepath.Join(path, names.MetaDataDb), false, f.repo.Prune)
 		defer metaData.Close()
 
 		entry, err := metaData.Packages.DelR(pkg)

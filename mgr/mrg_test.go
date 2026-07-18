@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/goforj/godump"
+	"github.com/platform-engineering-labs/orbital"
 	"github.com/platform-engineering-labs/orbital/opm/security"
 	"github.com/platform-engineering-labs/orbital/opm/tree"
 	"github.com/platform-engineering-labs/orbital/ops"
@@ -16,7 +17,7 @@ import (
 func TestMgr(t *testing.T) {
 	repo, _ := url.Parse("https://hub.platform.engineering/repos/platform.engineering/pel#stable")
 
-	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), "/Users/discountelf/.pel/ops/trees/default", &tree.Config{
+	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), orbital.WithWritable(), orbital.WithEmbedded("/Users/discountelf/.pel/ops/trees/default", &tree.Config{
 		OS:       platform.Current().OS,
 		Arch:     platform.Current().Arch,
 		Security: security.Default,
@@ -28,7 +29,12 @@ func TestMgr(t *testing.T) {
 				Prune:    0,
 			},
 		},
-	})
+	}), orbital.WithSudo())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = mgr.Refresh()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +50,7 @@ func TestMgr(t *testing.T) {
 func TestMgrAvailableSimple(t *testing.T) {
 	repo, _ := url.Parse("https://hub.platform.engineering/repos/platform.engineering/pel#stable")
 
-	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), "/Users/discountelf/.pel/ops/trees/default", &tree.Config{
+	mgr, err := New(slog.New(slog.NewTextHandler(os.Stderr, nil)), orbital.WithWritable(), orbital.WithEmbedded("/Users/discountelf/.pel/ops/trees/default", &tree.Config{
 		OS:       platform.Current().OS,
 		Arch:     platform.Current().Arch,
 		Security: security.Default,
@@ -56,7 +62,12 @@ func TestMgrAvailableSimple(t *testing.T) {
 				Prune:    0,
 			},
 		},
-	})
+	}), orbital.WithSudo())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = mgr.Refresh()
 	if err != nil {
 		t.Fatal(err)
 	}

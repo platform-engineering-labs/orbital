@@ -21,7 +21,7 @@ var Setup = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfgPath, _ := cmd.Flags().GetString("config")
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath))
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ var Setup = &cobra.Command{
 
 		treeConf, _ := osg.LookupEnv("OPS_TREE_CONF")
 
-		confPath := filepath.Join(orb.Tree.Current().Path, names.TreeDataDir, names.TreeConfigFile)
+		confPath := filepath.Join(orb.Tree.Path(), names.TreeDataDir, names.TreeConfigFile)
 		return osg.WriteFile(confPath, []byte(treeConf), 0644)
 	},
 }

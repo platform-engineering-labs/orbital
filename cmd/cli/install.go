@@ -25,7 +25,7 @@ var Install = &cobra.Command{
 			return fmt.Errorf("package argument required")
 		}
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}

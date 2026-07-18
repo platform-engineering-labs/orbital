@@ -7,9 +7,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"syscall"
+	"time"
 
 	"github.com/asdine/storm"
 	"github.com/gofrs/flock"
@@ -25,41 +24,8 @@ import (
 	"github.com/platform-engineering-labs/orbital/sys"
 	"github.com/platform-engineering-labs/orbital/x/collections"
 	filepathx "github.com/platform-engineering-labs/orbital/x/filepath"
+	bolt "go.etcd.io/bbolt"
 )
-
-var tpl = `amends "orbital:/tree.pkl"
-
-os = "%s"
-arch = "%s"
-`
-
-type Tree interface {
-	Cache() *cache.Cache
-	Config() *Config
-	Current() *Entry
-	Destroy(name string) (*Entry, error)
-	Get(name string) (*Entry, error)
-	Init(name string, pltfrm *platform.Platform, force bool) (*Entry, error)
-	Ready() bool
-	List() ([]*Entry, error)
-	Lock() error
-	Unlock() error
-	Pki() *pki.Pki
-	Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error)
-	RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error
-	Security() security.Security
-	State() *state.State
-	StateToRepo() (*ops.Repository, error)
-	Switch(string) error
-}
-type Entry struct {
-	Name     string
-	Path     string
-	Platform *platform.Platform
-
-	Current    bool
-	Privileged bool
-}
 
 type Type string
 
@@ -69,196 +35,148 @@ const (
 	Root     Type = "root"
 )
 
-func CreateDefault(root string) error {
-	tree := &TreeDynamic{root: root, platform: platform.Current()}
+var tpl = `amends "orbital:/tree.pkl"
 
-	if _, err := tree.Get(names.TreeDefault); err == nil {
+os = "%s"
+arch = "%s"
+`
+
+type Entry struct {
+	Path string `storm:"id"`
+	Name string `storm:"unique"`
+}
+
+type Tree struct {
+	*slog.Logger
+
+	Name string
+	Path string
+
+	Config   *Config
+	Platform *platform.Platform
+
+	Cache    *cache.Cache
+	Signing  *pki.Signing
+	Trust    *pki.Trust
+	Security security.Security
+	State    *state.State
+
+	privileged bool
+	writable   bool
+	lock       *flock.Flock
+}
+
+func Add(entry *Entry) error {
+	db, err := Store()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return db.Save(entry)
+}
+
+func CreateDefault() error {
+	path := filepath.Join(paths.TreeRootDefault(), names.TreeDefault)
+
+	if _, err := Get(names.TreeDefault); err == nil {
 		return nil
 	}
 
-	_, err := tree.Init(names.TreeDefault, platform.Current(), false)
+	entry, err := Init(names.TreeDefault, path, platform.Current(), true, false)
 	if err != nil {
 		return err
 	}
 
-	return tree.Switch(names.TreeDefault)
-}
-
-func New(log *slog.Logger, root string, t Type, cfg *Config) (Tree, error) {
-	var err error
-
-	switch t {
-	case Dynamic:
-		tr := &TreeDynamic{Logger: log, root: root}
-
-		tr.cfg, err = Load(filepath.Join(tr.Current().Path, names.TreeDataDir, names.TreeConfigFile))
-		if err != nil {
-			return nil, err
-		}
-
-		tr.platform = &platform.Platform{
-			OS:   tr.cfg.OS,
-			Arch: tr.cfg.Arch,
-		}
-
-		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
-			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
-			}
-
-			err := sys.InvokeSelfWithSudo()
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if tr.Ready() {
-			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
-
-			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
-			if err != nil {
-				return nil, err
-			}
-
-			tr.state = state.New(paths.TreeState(tr.Current().Path))
-		}
-
-		return tr, nil
-	case Embedded:
-		tr := &TreeEmbedded{Logger: log, root: root, platform: platform.Current()}
-
-		tr.cfg = cfg
-
-		if tr.Current().Privileged && !sys.IsPrivilegedUser() {
-			if !sys.SudoSessionActive() {
-				log.Warn(fmt.Sprintf("privileged user required to manage path: %s", tr.Current().Path))
-			}
-
-			err := sys.InvokeSelfWithSudo()
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if tr.Ready() {
-			tr.cache = cache.New(paths.TreeCache(tr.Current().Path))
-			tr.pki = pki.New(paths.TreePki(tr.Current().Path))
-			tr.lock = flock.New(paths.TreeLock(tr.Current().Path))
-
-			tr.sec, err = security.New(tr.Logger, tr.cfg.Security, tr.pki)
-			if err != nil {
-				return nil, err
-			}
-
-			tr.state = state.New(paths.TreeState(tr.Current().Path))
-		}
-
-		return tr, nil
-	default:
-		panic("tree: unknown type")
+	err = Add(entry)
+	if err != nil {
+		return err
 	}
+
+	return Switch(names.TreeDefault)
 }
 
-type TreeDynamic struct {
-	*slog.Logger
-
-	root     string
-	platform *platform.Platform
-
-	cfg *Config
-
-	cache *cache.Cache
-	pki   *pki.Pki
-	sec   security.Security
-	state *state.State
-
-	lock *flock.Flock
-}
-
-func (t *TreeDynamic) Cache() *cache.Cache {
-	return t.cache
-}
-
-func (t *TreeDynamic) Config() *Config {
-	return t.cfg
-}
-
-func (t *TreeDynamic) Current() *Entry {
-	current, _ := os.Readlink(filepath.Join(t.root, names.TreeCurrent))
+func Current() (*Entry, error) {
+	current, _ := os.Readlink(filepath.Join(paths.DataDefault(), names.TreeCurrent))
 
 	if current == "" {
-		current = filepath.Join(t.root, names.TreeDefault)
-		_ = t.Switch(names.TreeDefault)
+		current = filepath.Join(paths.DataDefault(), names.TreeDefault)
+		_ = Switch(names.TreeDefault)
 	}
 
-	return &Entry{
-		Name:       filepath.Base(current),
-		Path:       current,
-		Platform:   t.platform,
-		Current:    true,
-		Privileged: privileged(current),
-	}
-}
-
-func (t *TreeDynamic) Get(name string) (*Entry, error) {
-	path := filepath.Join(t.root, name)
-
-	if !filepathx.FileExists(path) {
-		binPath, _ := os.Executable()
-		if binPath != "" && !strings.HasPrefix(binPath, t.root) && strings.HasSuffix(filepath.Dir(filepath.Dir(binPath)), name) {
-			if filepathx.FileExists(filepath.Join(filepath.Dir(filepath.Dir(binPath)), names.TreeDataDir)) {
-				path = filepath.Dir(filepath.Dir(binPath))
-			} else {
-				return nil, fmt.Errorf("%s does not exist: at %s", name, path)
-			}
-		} else {
-			return nil, fmt.Errorf("%s does not exist: at %s", name, path)
+	if tree := Virtual(); tree != nil {
+		if current == tree.Path {
+			return tree, nil
 		}
 	}
 
-	cfg, err := Load(filepath.Join(path, names.TreeDataDir, names.TreeConfigFile))
+	db, err := Store()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	tree := &Entry{}
+	err = db.One("Path", current, tree)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Entry{
-		Name:       name,
-		Path:       path,
-		Platform:   cfg.Platform(),
-		Privileged: privileged(path),
-	}, nil
+	return tree, nil
 }
 
-func (t *TreeDynamic) Destroy(name string) (*Entry, error) {
-	if t.root == "" || name == "" {
-		return nil, fmt.Errorf("error: tree root or name should not be empty")
+func Destroy(name string) (*Entry, error) {
+	if name == "" {
+		return nil, fmt.Errorf("error: tree name should not be empty")
 	}
 
-	if name == t.Current().Name {
-		return nil, fmt.Errorf("error: cannot delete current tree (in use)")
-	}
-
-	path := filepath.Join(t.root, name)
-	cfg, err := Load(filepath.Join(path, names.TreeDataDir, names.TreeConfigFile))
+	tree, err := Get(name)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Entry{
-		Name:     name,
-		Path:     path,
-		Platform: cfg.Platform(),
-	}, os.RemoveAll(path)
-}
+	db, err := Store()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
 
-func (t *TreeDynamic) Init(name string, pltfrm *platform.Platform, force bool) (*Entry, error) {
-	if t.root == "" || name == "" {
-		return nil, fmt.Errorf("error: tree root or name should not be empty")
+	err = db.DeleteStruct(tree)
+	if err != nil {
+		return nil, err
 	}
 
-	path := filepath.Join(t.root, name)
+	return tree, os.RemoveAll(tree.Path)
+}
+
+func Get(name string) (*Entry, error) {
+	tree := Virtual()
+
+	if tree := Virtual(); tree != nil {
+		if name == "virtual" {
+			return tree, nil
+		}
+	}
+
+	db, err := Store()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	tree = &Entry{}
+	err = db.One("Name", name, tree)
+	if err != nil {
+		return nil, err
+	}
+
+	return tree, nil
+}
+
+func Init(name string, path string, pltfrm *platform.Platform, createConfig bool, force bool) (*Entry, error) {
+	if path == "" || name == "" {
+		return nil, fmt.Errorf("error: tree root or name should not be empty")
+	}
 
 	if filepathx.FileExists(filepath.Join(path, names.TreeDataDir)) && !force {
 		return nil, fmt.Errorf("%s already exists: %s", name, path)
@@ -271,122 +189,106 @@ func (t *TreeDynamic) Init(name string, pltfrm *platform.Platform, force bool) (
 		}
 	}
 
-	err := os.MkdirAll(filepath.Join(t.root, name, names.TreeDataDir), 0755)
+	err := os.MkdirAll(filepath.Join(path, names.TreeDataDir), 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	err = os.WriteFile(
-		filepath.Join(t.root, name, names.TreeDataDir, names.TreeConfigFile),
-		[]byte(fmt.Sprintf(tpl, pltfrm.OS, pltfrm.Arch)),
-		0644)
+	if createConfig {
+		err = os.WriteFile(
+			filepath.Join(path, names.TreeDataDir, names.TreeConfigFile),
+			[]byte(fmt.Sprintf(tpl, pltfrm.OS, pltfrm.Arch)),
+			0644)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	st := state.New(paths.TreeState(path), false)
+	err = st.Touch()
 	if err != nil {
 		return nil, err
 	}
+
+	si := pki.NewSigning(paths.TreeSigning(path))
+	si.Touch()
+
+	tru := pki.NewTrust(paths.TreeTrust(path), false)
+	tru.Touch()
 
 	return &Entry{
-		Name:     name,
-		Path:     filepath.Join(t.root, name),
-		Platform: pltfrm,
+		Name: name,
+		Path: path,
 	}, nil
 }
 
-func (t *TreeDynamic) List() ([]*Entry, error) {
+func List() ([]*Entry, error) {
 	var trees []*Entry
 
-	dirs, err := os.ReadDir(t.root)
+	db, err := Store()
 	if err != nil {
 		return nil, err
 	}
 
-	current := t.Current()
-
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			cfg, _ := Load(filepath.Join(dir.Name(), names.TreeDataDir, names.TreeConfigFile))
-
-			trees = append(trees, &Entry{
-				Name:     filepath.Base(dir.Name()),
-				Path:     filepath.Join(t.root, dir.Name()),
-				Platform: cfg.Platform(),
-				Current:  current.Name == filepath.Base(dir.Name()),
-			})
-		}
+	err = db.All(&trees)
+	if err != nil {
+		return nil, err
 	}
+	db.Close()
 
-	// Allow management of tree outside of root for current binary
-	binPath, _ := os.Executable()
-	binPathFinal, _ := filepath.EvalSymlinks(binPath)
-
-	if binPathFinal != "" && !strings.HasPrefix(binPathFinal, t.root) {
-		extRoot := filepath.Dir(filepath.Dir(binPathFinal))
-
-		if filepathx.FileExists(filepath.Join(extRoot, names.TreeDataDir)) {
-			cfg, _ := Load(filepath.Join(extRoot, names.TreeDataDir, names.TreeConfigFile))
-			trees = append(trees, &Entry{
-				Name:     filepath.Base(extRoot),
-				Path:     extRoot,
-				Platform: cfg.Platform(),
-				Current:  current.Name == filepath.Base(extRoot),
-			})
-		}
-	}
-
-	if !slices.ContainsFunc(
-		trees, func(tree *Entry) bool {
-			return tree.Path == current.Path
-		}) {
-		trees = append(trees, current)
+	if virt := Virtual(); virt != nil {
+		trees = append(trees, virt)
 	}
 
 	return trees, nil
 }
 
-func (t *TreeDynamic) Lock() error {
-	return t.lock.Lock()
-}
-
-func (t *TreeDynamic) Pki() *pki.Pki {
-	return t.pki
-}
-
-func (t *TreeDynamic) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
-	return pool(t, platforms, empty, repos...)
-}
-
-func (t *TreeDynamic) Ready() bool {
-	if privileged(t.root) && !sys.IsPrivilegedUser() {
-		return false
+func Lookup(path string) (*Entry, error) {
+	db, err := Store()
+	if err != nil {
+		return nil, err
 	}
-	return filepathx.FileExists(filepath.Join(t.Current().Path, names.TreeDataDir))
-}
+	defer db.Close()
 
-func (t *TreeDynamic) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {
-	return load(t, platforms, repo, all)
-}
-
-func (t *TreeDynamic) Security() security.Security {
-	return t.sec
-}
-
-func (t *TreeDynamic) State() *state.State {
-	return t.state
-}
-
-func (t *TreeDynamic) StateToRepo() (*ops.Repository, error) {
-	return stateToRepo(t)
-}
-
-func (t *TreeDynamic) Switch(name string) error {
-	_ = os.Remove(filepath.Join(t.root, names.TreeCurrent))
-
-	path := filepath.Join(t.root, name)
-	binPath, _ := os.Executable()
-	if binPath != "" && !strings.HasPrefix(binPath, t.root) && strings.HasSuffix(filepath.Dir(filepath.Dir(binPath)), name) {
-		path = filepath.Dir(filepath.Dir(binPath))
+	tree := &Entry{}
+	err = db.One("Path", path, tree)
+	if err != nil {
+		return nil, err
 	}
 
-	err := os.Symlink(path, filepath.Join(t.root, names.TreeCurrent))
+	return tree, nil
+}
+
+func Privileged(path string) bool {
+	if !filepathx.FileExists(path) {
+		path = filepath.Dir(path)
+	}
+
+	stat, _ := os.Stat(path)
+	if stat != nil {
+		if stat.Sys().(*syscall.Stat_t).Uid != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func Store() (*storm.DB, error) {
+	return storm.Open(paths.TreeStore(), storm.BoltOptions(0644, &bolt.Options{Timeout: 10 * time.Second}))
+}
+
+func Switch(name string) error {
+	var err error
+
+	tree, err := Get(name)
+	if err != nil {
+		return err
+	}
+
+	_ = os.Remove(filepath.Join(paths.DataDefault(), names.TreeCurrent))
+
+	err = os.Symlink(tree.Path, filepath.Join(paths.DataDefault(), names.TreeCurrent))
 	if err != nil {
 		return err
 	}
@@ -394,153 +296,80 @@ func (t *TreeDynamic) Switch(name string) error {
 	return nil
 }
 
-func (t *TreeDynamic) Unlock() error {
-	defer os.Remove(t.lock.Path())
-	return t.lock.Unlock()
-}
+func Virtual() *Entry {
+	var tree *Entry
 
-type TreeEmbedded struct {
-	*slog.Logger
+	binPath, _ := os.Executable()
+	binPathFinal, _ := filepath.EvalSymlinks(binPath)
 
-	root     string
-	platform *platform.Platform
+	if binPathFinal != "" {
+		extRoot := filepath.Dir(filepath.Dir(binPathFinal))
+		_, err := Lookup(extRoot)
 
-	cfg *Config
-
-	cache *cache.Cache
-	pki   *pki.Pki
-	sec   security.Security
-	state *state.State
-
-	lock *flock.Flock
-}
-
-func (t *TreeEmbedded) Cache() *cache.Cache {
-	return t.cache
-}
-
-func (t *TreeEmbedded) Config() *Config {
-	return t.cfg
-}
-
-func (t *TreeEmbedded) Current() *Entry {
-	return &Entry{Name: filepath.Base(t.root), Path: t.root, Current: true, Privileged: privileged(t.root)}
-}
-
-func (t *TreeEmbedded) Destroy(name string) (*Entry, error) {
-	if t.root == "" || name == "" {
-		return nil, fmt.Errorf("error: tree root or name should not be empty")
-	}
-
-	if name == t.Current().Name {
-		return nil, fmt.Errorf("error: cannot delete current tree (in use)")
-	}
-
-	path := filepath.Join(t.root, name)
-
-	return &Entry{
-		Name:     name,
-		Path:     path,
-		Platform: platform.Current(),
-	}, os.Remove(path)
-}
-
-func (t *TreeEmbedded) Get(name string) (*Entry, error) {
-	path := filepath.Join(t.root, name)
-
-	if !filepathx.FileExists(path) {
-		return nil, fmt.Errorf("%s does not exist: at %s", name, path)
-	}
-
-	return &Entry{
-		Name:     name,
-		Path:     path,
-		Platform: platform.Current(),
-	}, nil
-}
-
-func (t *TreeEmbedded) Init(_ string, _ *platform.Platform, force bool) (*Entry, error) {
-	if t.root == "" {
-		return nil, fmt.Errorf("error: tree root should not be empty")
-	}
-
-	if filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir)) && !force {
-		return nil, fmt.Errorf("already exists: %s", t.root)
-	}
-
-	if filepathx.FileExists(t.root) && force {
-		err := os.RemoveAll(t.root)
 		if err != nil {
-			return nil, err
+			if filepathx.FileExists(filepath.Join(extRoot, names.TreeDataDir)) {
+				_, err := Load(filepath.Join(extRoot, names.TreeDataDir, names.TreeConfigFile))
+				if err != nil {
+					return nil
+				}
+
+				tree = &Entry{
+					Name: "$virtual",
+					Path: extRoot,
+				}
+			}
 		}
 	}
 
-	return &Entry{
-		Name:     filepath.Base(t.root),
-		Path:     t.root,
-		Platform: platform.Current(),
-	}, os.MkdirAll(filepath.Join(t.root, names.TreeDataDir), 0755)
+	return tree
 }
 
-func (t *TreeEmbedded) List() ([]*Entry, error) {
-	return []*Entry{
-		{
-			Name:     filepath.Base(t.root),
-			Path:     t.root,
-			Platform: t.platform,
-			Current:  true,
-		},
-	}, nil
+func New(log *slog.Logger, name string, path string, writeable bool, cfg *Config) (*Tree, error) {
+	var err error
+
+	tr := &Tree{Logger: log, Name: name, Path: path, Config: cfg, Platform: platform.Current(), writable: writeable}
+
+	if cfg == nil {
+		tr.Config, err = Load(filepath.Join(tr.Path, names.TreeDataDir, names.TreeConfigFile))
+		if err != nil {
+			return nil, err
+		}
+
+		tr.Platform = &platform.Platform{
+			OS:   tr.Config.OS,
+			Arch: tr.Config.Arch,
+		}
+	}
+
+	tr.privileged = Privileged(tr.Path)
+
+	if tr.Ready() {
+		tr.Cache = cache.New(paths.TreeCache(tr.Path))
+		tr.Trust = pki.NewTrust(paths.TreeTrust(tr.Path), !writeable)
+
+		if writeable {
+			tr.Signing = pki.NewSigning(paths.TreeSigning(tr.Path))
+			tr.lock = flock.New(paths.TreeLock(tr.Path))
+		}
+
+		tr.Security, err = security.New(tr.Logger, tr.Config.Security, tr.Trust)
+		if err != nil {
+			return nil, err
+		}
+
+		tr.State = state.New(paths.TreeState(tr.Path), !writeable)
+	}
+	return tr, nil
 }
 
-func (t *TreeEmbedded) Lock() error {
+func (t *Tree) Lock() error {
 	return t.lock.Lock()
 }
 
-func (t *TreeEmbedded) Pki() *pki.Pki {
-	return t.pki
-}
-
-func (t *TreeEmbedded) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
-	return pool(t, platforms, empty, repos...)
-}
-
-func (t *TreeEmbedded) Ready() bool {
-	if privileged(t.root) && !sys.IsPrivilegedUser() {
-		return false
-	}
-	return filepathx.FileExists(filepath.Join(t.root, names.TreeDataDir))
-}
-
-func (t *TreeEmbedded) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {
-	return load(t, platforms, repo, all)
-}
-
-func (t *TreeEmbedded) Security() security.Security {
-	return t.sec
-}
-
-func (t *TreeEmbedded) State() *state.State {
-	return t.state
-}
-
-func (t *TreeEmbedded) StateToRepo() (*ops.Repository, error) {
-	return stateToRepo(t)
-}
-
-func (t *TreeEmbedded) Switch(_ string) error {
-	return nil
-}
-
-func (t *TreeEmbedded) Unlock() error {
-	defer os.Remove(t.lock.Path())
-	return t.lock.Unlock()
-}
-
-func pool(tree Tree, platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
-	for _, repo := range tree.Config().Repositories {
+func (t *Tree) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Repository) (*ops.Pool, error) {
+	for _, repo := range t.Config.Repositories {
 		if repo.Enabled {
-			err := tree.RepoLoad(platforms, &repo, false)
+			err := t.RepoLoad(platforms, &repo, false)
 			if err != nil {
 				return nil, err
 			}
@@ -549,7 +378,7 @@ func pool(tree Tree, platforms []*platform.Platform, empty bool, repos ...*ops.R
 		}
 	}
 
-	frozenEntries, err := tree.State().Frozen.All()
+	frozenEntries, err := t.State.Frozen.All()
 	if err != nil {
 		return nil, err
 	}
@@ -562,7 +391,7 @@ func pool(tree Tree, platforms []*platform.Platform, empty bool, repos ...*ops.R
 	uri, _ := url.Parse("tree://none")
 	rpState := ops.NewRepo(*uri, true, -1)
 	if !empty {
-		rpState, err = tree.StateToRepo()
+		rpState, err = t.StateToRepo()
 		if err != nil {
 			return nil, err
 		}
@@ -576,11 +405,24 @@ func pool(tree Tree, platforms []*platform.Platform, empty bool, repos ...*ops.R
 	return pool, nil
 }
 
-func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all bool) error {
-	for _, pltfrm := range platforms {
-		metadataPath := tree.Cache().GetMeta(pltfrm.String(), repo.SafeUri())
+func (t *Tree) Privileged() bool {
+	return t.privileged
+}
 
-		md := metadata.New(metadataPath, repo.Prune)
+func (t *Tree) Ready() bool {
+	if t.writable {
+		if t.privileged && !sys.IsPrivilegedUser() {
+			return false
+		}
+	}
+	return filepathx.FileExists(filepath.Join(t.Path, names.TreeDataDir))
+}
+
+func (t *Tree) RepoLoad(platforms []*platform.Platform, repo *ops.Repository, all bool) error {
+	for _, pltfrm := range platforms {
+		metadataPath := t.Cache.GetMeta(pltfrm.String(), repo.SafeUri())
+
+		md := metadata.New(metadataPath, true, repo.Prune)
 		if !md.Exists() {
 			continue
 		}
@@ -636,23 +478,8 @@ func load(tree Tree, platforms []*platform.Platform, repo *ops.Repository, all b
 	return nil
 }
 
-func privileged(root string) bool {
-	if !filepathx.FileExists(root) {
-		root = filepath.Dir(root)
-	}
-
-	stat, _ := os.Stat(root)
-	if stat != nil {
-		if stat.Sys().(*syscall.Stat_t).Uid != 0 {
-			return false
-		}
-	}
-
-	return true
-}
-
-func stateToRepo(tree Tree) (*ops.Repository, error) {
-	packages, err := tree.State().Packages.All()
+func (t *Tree) StateToRepo() (*ops.Repository, error) {
+	packages, err := t.State.Packages.All()
 	if err != nil {
 		return nil, err
 	}
@@ -662,13 +489,18 @@ func stateToRepo(tree Tree) (*ops.Repository, error) {
 		headers = append(headers, manifest.Header)
 	}
 
-	uri, _ := url.Parse("tree://" + tree.Current().Name)
+	uri, _ := url.Parse("tree://" + t.Name)
 	repo := ops.NewRepo(*uri, true, -1)
 
-	err = repo.Load(tree.Config().Platform(), nil, headers)
+	err = repo.Load(t.Config.Platform(), nil, headers)
 	if err != nil {
 		return nil, err
 	}
 
 	return repo, nil
+}
+
+func (t *Tree) Unlock() error {
+	defer os.Remove(t.lock.Path())
+	return t.lock.Unlock()
 }

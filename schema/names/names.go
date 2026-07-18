@@ -6,8 +6,9 @@ const (
 	OpkgFile   = "Opkgfile"
 	OpkgTarget = "dist"
 
-	Cache    = "cache"
-	PkiStore = "pki.db"
+	Cache      = "cache"
+	PkiTrust   = "trust.db"
+	PkiSigning = "signing.db"
 
 	TreeConfigFile = "tree.pkl"
 	TreeDataDir    = ".ops"
@@ -18,4 +19,5 @@ const (
 
 	MetaDataDb = "metadata.db"
 	StateDb    = "state.db"
+	TreesDb    = "trees.db"
 )

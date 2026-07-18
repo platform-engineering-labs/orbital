@@ -20,7 +20,7 @@ var Remove = &cobra.Command{
 			return fmt.Errorf("must specify at least one package to remove")
 		}
 
-		orb, err := orbital.Dynamic(slog.New(Logger), cfgPath)
+		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}
