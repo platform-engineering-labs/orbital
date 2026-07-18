@@ -41,7 +41,7 @@ var Setup = &cobra.Command{
 
 		treeConf, _ := osg.LookupEnv("OPS_TREE_CONF")
 
-		confPath := filepath.Join(orb.Tree.Current().Path, names.TreeDataDir, names.TreeConfigFile)
+		confPath := filepath.Join(orb.Tree.Path(), names.TreeDataDir, names.TreeConfigFile)
 		return osg.WriteFile(confPath, []byte(treeConf), 0644)
 	},
 }

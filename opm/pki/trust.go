@@ -69,6 +69,16 @@ func (t *Trust) Close() {
 	t.db = nil
 }
 
+func (t *Trust) Touch() error {
+	_, err := t.getDb()
+	if err != nil {
+		return err
+	}
+	defer t.Close()
+
+	return nil
+}
+
 func (c *Certificates) All() ([]*CertEntry, error) {
 	db, err := c.trust.getDb()
 	if err != nil {

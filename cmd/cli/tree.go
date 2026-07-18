@@ -81,7 +81,7 @@ var TreeDestroy = &cobra.Command{
 }
 
 var TreeInit = &cobra.Command{
-	Use:   "init [Tree Name]",
+	Use:   "init [Name] [Path]",
 	Short: "create a new ops tree",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -110,12 +110,17 @@ var TreeInit = &cobra.Command{
 			return fmt.Errorf("must specify a name for the ops tree")
 		}
 
+		path := cmd.Flags().Arg(1)
+		if name == "" {
+			return fmt.Errorf("must specify a path for the ops tree")
+		}
+
 		orb, err := orbital.New(slog.New(Logger), orbital.WithConfig(cfgPath), orbital.WithSudo(), orbital.WithWritable())
 		if err != nil {
 			return err
 		}
 
-		entry, err := orb.Tree.Init(name, pltfrm, force)
+		entry, err := orb.Tree.Init(name, path, pltfrm, true, force)
 		if err != nil {
 			return err
 		}
@@ -148,7 +153,7 @@ var TreeList = &cobra.Command{
 
 		for _, tree := range trees {
 			current := ""
-			if tree.Current {
+			if orb.Tree.Path() == tree.Path {
 				current = " *"
 			}
 

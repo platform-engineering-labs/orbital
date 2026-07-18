@@ -19,4 +19,5 @@ const (
 
 	MetaDataDb = "metadata.db"
 	StateDb    = "state.db"
+	TreesDb    = "trees.db"
 )

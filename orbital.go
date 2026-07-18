@@ -42,7 +42,7 @@ type Orbital struct {
 	sudo      bool
 
 	config *config.Config
-	tree   tree.Tree
+	tree   *tree.Tree
 
 	Cache       *Cache
 	Opkg        *Opkg
@@ -103,22 +103,32 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 	}
 
 	if orb.config.Mode == config.DynamicMode {
-		err := Init(orb.config.Mode, orb.config.TreeRoot)
+		_ = os.MkdirAll(paths.ConfigDefault(), 0750)
+		_ = os.MkdirAll(paths.DataDefault(), 0750)
+
+		if _, err := tree.Current(); err != nil {
+			err := tree.CreateDefault()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		current, err := tree.Current()
 		if err != nil {
 			return nil, err
 		}
 
-		orb.tree, err = tree.New(logger, orb.config.TreeRoot, tree.Dynamic, orb.writeable, nil)
+		orb.tree, err = tree.New(logger, current.Name, current.Path, true, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if orb.writeable {
-		if orb.tree.Current().Privileged && !sys.IsPrivilegedUser() {
+		if orb.tree.Privileged() && !sys.IsPrivilegedUser() {
 			if orb.sudo {
 				if !sys.SudoSessionActive() {
-					orb.Logger.Warn(fmt.Sprintf("privileged user required to manage path: %s", orb.tree.Current().Path))
+					orb.Logger.Warn(fmt.Sprintf("privileged user required to manage path: %s", orb.tree.Path))
 				}
 
 				err := sys.InvokeSelfWithSudo()
@@ -126,7 +136,7 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("privileged user required to manage path: %s", orb.tree.Current().Path)
+				return nil, fmt.Errorf("privileged user required to manage path: %s", orb.tree.Path)
 			}
 		}
 	}
@@ -142,20 +152,6 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 	return orb, nil
 }
 
-func Init(mode config.Mode, root string) error {
-	if mode == config.DynamicMode {
-		_ = os.MkdirAll(paths.ConfigDefault(), 0750)
-		_ = os.MkdirAll(paths.DataDefault(), 0750)
-
-		err := tree.CreateDefault(root)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (o *Orbital) getContext(phase string, options *provider.Options) context.Context {
 	ctx := context.WithValue(context.Background(), "phase", phase)
 	ctx = context.WithValue(ctx, "options", options)
@@ -164,7 +160,7 @@ func (o *Orbital) getContext(phase string, options *provider.Options) context.Co
 }
 
 func (o *Orbital) Contents(pkg string) (action.Actions, error) {
-	manifest, err := o.tree.State().Packages.Get(pkg)
+	manifest, err := o.tree.State.Packages.Get(pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +179,7 @@ func (o *Orbital) Freeze(packages ...string) error {
 	}
 	defer o.tree.Unlock()
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return err
 	}
@@ -198,7 +194,7 @@ func (o *Orbital) Freeze(packages ...string) error {
 		if target == nil {
 			return fmt.Errorf("freeze candidate: %s not installed", pkg)
 		} else {
-			err := o.tree.State().Frozen.Put(target.Id().String())
+			err := o.tree.State.Frozen.Put(target.Id().String())
 			if err != nil {
 				return err
 			}
@@ -210,7 +206,7 @@ func (o *Orbital) Freeze(packages ...string) error {
 }
 
 func (o *Orbital) Info(pkg string) (*ops.Header, error) {
-	manifest, err := o.tree.State().Packages.Get(pkg)
+	manifest, err := o.tree.State.Packages.Get(pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +228,7 @@ func (o *Orbital) Install(packages ...string) error {
 
 	packages, repos, err := opm.ReqsReposFromNames(packages)
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false, repos...)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false, repos...)
 	if err != nil {
 		return err
 	}
@@ -271,7 +267,7 @@ func (o *Orbital) Install(packages ...string) error {
 	for _, op := range operations {
 		switch op.Operation {
 		case phase.INSTALL:
-			fe, err := fetcher.New(o.Logger, o.tree.Cache(), o.tree.Security(), pool.Location(op.Package.Location))
+			fe, err := fetcher.New(o.Logger, o.tree.Cache, o.tree.Security, pool.Location(op.Package.Location))
 			if err != nil {
 				return err
 			}
@@ -293,13 +289,13 @@ func (o *Orbital) Install(packages ...string) error {
 		return nil
 	}
 
-	tr := opm.NewTransaction(o.Logger, o.tree.Current().Path, o.tree.Cache(), o.tree.State())
+	tr := opm.NewTransaction(o.Logger, o.tree.Path, o.tree.Cache, o.tree.State)
 
 	return tr.Realize(solution)
 }
 
 func (o *Orbital) List() (packages []*records.Package, err error) {
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +319,7 @@ func (o *Orbital) Plan(action string, packages ...string) ([]*solve.Operation, e
 		return nil, errors.New(fmt.Sprintf("invalid action: %s (install/remove supported)", action))
 	}
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +359,7 @@ func (o *Orbital) Plan(action string, packages ...string) ([]*solve.Operation, e
 }
 
 func (o *Orbital) Privileged() bool {
-	return o.tree.Current().Privileged
+	return o.tree.Privileged()
 }
 
 func (o *Orbital) Refresh() error {
@@ -373,13 +369,13 @@ func (o *Orbital) Refresh() error {
 	}
 	defer o.tree.Unlock()
 
-	for _, r := range o.tree.Config().Repositories {
+	for _, r := range o.tree.Config.Repositories {
 		if r.Enabled == false {
 			o.Warn(fmt.Sprintf("repo disabled: %s", r.SafeUri()))
 			continue
 		}
 
-		ftchr, err := fetcher.New(o.Logger, o.tree.Cache(), o.tree.Security(), &r)
+		ftchr, err := fetcher.New(o.Logger, o.tree.Cache, o.tree.Security, &r)
 		if err != nil {
 			o.Warn(fmt.Sprintf("failed to refresh: %s error: %s", r.SafeUri(), err))
 			continue
@@ -413,7 +409,7 @@ func (o *Orbital) Remove(packages ...string) error {
 	}
 	defer o.tree.Unlock()
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return err
 	}
@@ -440,13 +436,13 @@ func (o *Orbital) Remove(packages ...string) error {
 		return err
 	}
 
-	tr := opm.NewTransaction(o.Logger, o.tree.Current().Path, o.tree.Cache(), o.tree.State())
+	tr := opm.NewTransaction(o.Logger, o.tree.Path, o.tree.Cache, o.tree.State)
 
 	return tr.Realize(solution)
 }
 
 func (o *Orbital) Status(pkg string) (*records.Status, error) {
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return &records.Status{Status: candidate.None}, err
 	}
@@ -497,7 +493,7 @@ func (o *Orbital) Thaw(packages ...string) error {
 	}
 	defer o.tree.Unlock()
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return err
 	}
@@ -512,7 +508,7 @@ func (o *Orbital) Thaw(packages ...string) error {
 		if target == nil {
 			return fmt.Errorf("thaw candidate: %s not installed", pkg)
 		} else {
-			err := o.tree.State().Frozen.Del(target.Id().String())
+			err := o.tree.State.Frozen.Del(target.Id().String())
 			if err != nil {
 				return err
 			}
@@ -530,7 +526,7 @@ func (o *Orbital) Update(packages ...string) error {
 	}
 	defer o.tree.Unlock()
 
-	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config().Platform()), false)
+	pool, err := o.tree.Pool(platform.Expanded(o.tree.Config.Platform()), false)
 	if err != nil {
 		return err
 	}
@@ -579,7 +575,7 @@ func (o *Orbital) Update(packages ...string) error {
 	for _, op := range operations {
 		switch op.Operation {
 		case phase.INSTALL:
-			fe, err := fetcher.New(o.Logger, o.tree.Cache(), o.tree.Security(), pool.Location(op.Package.Location))
+			fe, err := fetcher.New(o.Logger, o.tree.Cache, o.tree.Security, pool.Location(op.Package.Location))
 			if err != nil {
 				return err
 			}
@@ -601,17 +597,17 @@ func (o *Orbital) Update(packages ...string) error {
 		return nil
 	}
 
-	tr := opm.NewTransaction(o.Logger, o.tree.Current().Path, o.tree.Cache(), o.tree.State())
+	tr := opm.NewTransaction(o.Logger, o.tree.Path, o.tree.Cache, o.tree.State)
 
 	return tr.Realize(solution)
 }
 
 func (c *Cache) Clean() error {
-	return c.orb.tree.Cache().Clean()
+	return c.orb.tree.Cache.Clean()
 }
 
 func (c *Cache) Clear() error {
-	return c.orb.tree.Cache().Clear()
+	return c.orb.tree.Cache.Clear()
 }
 
 func (o *Opkg) Build(manifestPath string, pltfrm *platform.Platform, targetPath string, workPath string, outputPath string, restrict bool, secure bool) (*ops.Manifest, string, error) {
@@ -628,7 +624,7 @@ func (o *Opkg) Build(manifestPath string, pltfrm *platform.Platform, targetPath 
 		return nil, "", err
 	}
 
-	kp, err := o.orb.tree.Signing().KeyPairs.FirstByPublisher(manifest.Publisher)
+	kp, err := o.orb.tree.Signing.KeyPairs.FirstByPublisher(manifest.Publisher)
 	if err != nil {
 		return nil, "", err
 	}
@@ -694,7 +690,7 @@ func (o *Opkg) Manifest(opkgPath string) (*ops.Manifest, error) {
 }
 
 func (o *Opkg) Validate(opkgPath string) error {
-	validator := opkg.NewValidator(o.Logger, o.orb.tree.Security(), false)
+	validator := opkg.NewValidator(o.Logger, o.orb.tree.Security, false)
 
 	return validator.Validate(opkgPath)
 }
@@ -745,7 +741,7 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 		return err
 	}
 
-	kps, err := p.orb.tree.Signing().KeyPairs.GetByPublisher(metadata.Publisher)
+	kps, err := p.orb.tree.Signing.KeyPairs.GetByPublisher(metadata.Publisher)
 	if err != nil {
 		return err
 	}
@@ -759,14 +755,14 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 				),
 			)
 
-			err := p.orb.tree.Signing().KeyPairs.Del(kps[index].SKI)
+			err := p.orb.tree.Signing.KeyPairs.Del(kps[index].SKI)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	err = p.orb.tree.Signing().KeyPairs.Put(metadata.SKI, metadata.Fingerprint, metadata.Subject, metadata.Publisher, certPem, keyPem)
+	err = p.orb.tree.Signing.KeyPairs.Put(metadata.SKI, metadata.Fingerprint, metadata.Subject, metadata.Publisher, certPem, keyPem)
 	if err != nil {
 		return err
 	}
@@ -777,7 +773,7 @@ func (p *Pki) KeyPairImport(mode string, cert, key string) error {
 }
 
 func (p *Pki) KeyPairList() ([]*pki.KeyPairEntry, error) {
-	return p.orb.tree.Signing().KeyPairs.All()
+	return p.orb.tree.Signing.KeyPairs.All()
 }
 
 func (p *Pki) KeyPairRemove(ski string) error {
@@ -787,7 +783,7 @@ func (p *Pki) KeyPairRemove(ski string) error {
 	}
 	defer p.orb.tree.Unlock()
 
-	err = p.orb.tree.Signing().KeyPairs.Del(ski)
+	err = p.orb.tree.Signing.KeyPairs.Del(ski)
 	if err != nil {
 		return err
 	}
@@ -804,7 +800,7 @@ func (p *Pki) TrustImportDNS(ski, publisher string) error {
 	}
 	defer p.orb.tree.Unlock()
 
-	_, err = p.orb.tree.Security().Resolve(ski, publisher)
+	_, err = p.orb.tree.Security.Resolve(ski, publisher)
 
 	return nil
 }
@@ -822,7 +818,7 @@ func (p *Pki) TrustImportFiles(cert ...string) error {
 			return err
 		}
 
-		entry, err := p.orb.tree.Security().Trust(&content)
+		entry, err := p.orb.tree.Security.Trust(&content)
 		if err != nil {
 			return err
 		}
@@ -834,7 +830,7 @@ func (p *Pki) TrustImportFiles(cert ...string) error {
 }
 
 func (p *Pki) TrustList() ([]*pki.CertEntry, error) {
-	return p.orb.tree.Trust().Certificates.All()
+	return p.orb.tree.Trust.Certificates.All()
 }
 
 func (p *Pki) TrustRefresh() error {
@@ -844,7 +840,7 @@ func (p *Pki) TrustRefresh() error {
 	}
 	defer p.orb.tree.Unlock()
 
-	return p.orb.tree.Security().Refresh()
+	return p.orb.tree.Security.Refresh()
 }
 
 func (p *Pki) TrustRemove(ski string) error {
@@ -854,7 +850,7 @@ func (p *Pki) TrustRemove(ski string) error {
 	}
 	defer p.orb.tree.Unlock()
 
-	err = p.orb.tree.Trust().Certificates.Del(ski)
+	err = p.orb.tree.Trust.Certificates.Del(ski)
 	if err != nil {
 		return err
 	}
@@ -865,12 +861,12 @@ func (p *Pki) TrustRemove(ski string) error {
 }
 
 func (p *Publish) Channel(repo string, channels []string, id *ops.Id) error {
-	rp, err := p.orb.tree.Config().Repository(repo)
+	rp, err := p.orb.tree.Config.Repository(repo)
 	if err != nil {
 		return err
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{}, p.orb.tree.Signing(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{}, p.orb.tree.Signing, rp)
 	if err != nil {
 		return err
 	}
@@ -908,7 +904,7 @@ func (p *Publish) Fetch(names []string, pltfrm *platform.Platform) error {
 	for _, job := range request.Jobs() {
 		pkg := policy.SelectRequest(pool.WhatProvides(job.Requirement()))
 
-		fe, err := fetcher.New(p.orb.Logger, p.orb.tree.Cache(), p.orb.tree.Security(), pool.Location(pkg.Location))
+		fe, err := fetcher.New(p.orb.Logger, p.orb.tree.Cache, p.orb.tree.Security, pool.Location(pkg.Location))
 		if err != nil {
 			return err
 		}
@@ -926,7 +922,7 @@ func (p *Publish) Fetch(names []string, pltfrm *platform.Platform) error {
 			return errors.New("could not get current directory")
 		}
 
-		src, err := os.Open(p.orb.tree.Cache().GetFile(pkg.FileName()))
+		src, err := os.Open(p.orb.tree.Cache.GetFile(pkg.FileName()))
 		if err != nil {
 			return err
 		}
@@ -947,7 +943,7 @@ func (p *Publish) Fetch(names []string, pltfrm *platform.Platform) error {
 }
 
 func (p *Publish) Publish(repo string, workPath string, opkgFiles []string, channels []string) (published, pruned []string, err error) {
-	rp, err := p.orb.tree.Config().Repository(repo)
+	rp, err := p.orb.tree.Config.Repository(repo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -956,7 +952,7 @@ func (p *Publish) Publish(repo string, workPath string, opkgFiles []string, chan
 		channels = append(channels, rp.Uri.Fragment)
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing, rp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -965,12 +961,12 @@ func (p *Publish) Publish(repo string, workPath string, opkgFiles []string, chan
 }
 
 func (p *Publish) Yank(repo string, pkg string, workPath string) error {
-	rp, err := p.orb.tree.Config().Repository(repo)
+	rp, err := p.orb.tree.Config.Repository(repo)
 	if err != nil {
 		return err
 	}
 
-	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing(), rp)
+	pub, err := publisher.New(p.Logger, &provider.Options{WorkPath: workPath}, p.orb.tree.Signing, rp)
 	if err != nil {
 		return err
 	}
@@ -982,10 +978,10 @@ func (r *Repo) Contents(repoName string, all bool) (*ops.Repository, error) {
 	platforms := platform.SupportedPlatforms
 
 	if !all {
-		platforms = platform.Expanded(r.orb.tree.Config().Platform())
+		platforms = platform.Expanded(r.orb.tree.Config.Platform())
 	}
 
-	for _, repo := range r.orb.tree.Config().Repositories {
+	for _, repo := range r.orb.tree.Config.Repositories {
 		if repoName == *repo.Name() {
 			err := r.orb.tree.RepoLoad(platforms, &repo, all)
 			if err != nil {
@@ -1000,12 +996,12 @@ func (r *Repo) Contents(repoName string, all bool) (*ops.Repository, error) {
 }
 
 func (r *Repo) Init(repo, workPath string) (uri *url.URL, err error) {
-	rp, err := r.orb.tree.Config().Repository(repo)
+	rp, err := r.orb.tree.Config.Repository(repo)
 	if err != nil {
 		return nil, err
 	}
 
-	pub, err := publisher.New(r.Logger, &provider.Options{WorkPath: workPath}, r.orb.tree.Signing(), rp)
+	pub, err := publisher.New(r.Logger, &provider.Options{WorkPath: workPath}, r.orb.tree.Signing, rp)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,11 +1010,11 @@ func (r *Repo) Init(repo, workPath string) (uri *url.URL, err error) {
 }
 
 func (r *Repo) List() []ops.Repository {
-	return r.orb.tree.Config().Repositories
+	return r.orb.tree.Config.Repositories
 }
 
 func (t *Transaction) List() (map[string][]*state.TransactionEntry, error) {
-	transactions, err := t.orb.tree.State().Transactions.All()
+	transactions, err := t.orb.tree.State.Transactions.All()
 	if err != nil {
 		return nil, err
 	}
@@ -1036,19 +1032,24 @@ func (t *Transaction) List() (map[string][]*state.TransactionEntry, error) {
 }
 
 func (t *Tree) Destroy(name string) (*tree.Entry, error) {
-	return t.orb.tree.Destroy(name)
+	return tree.Destroy(name)
 }
 
-func (t *Tree) Current() *tree.Entry {
-	return t.orb.tree.Current()
+func (t *Tree) Path() string {
+	return t.orb.tree.Path
 }
 
 func (t *Tree) Get(name string) (*tree.Entry, error) {
-	return t.orb.tree.Get(name)
+	return tree.Get(name)
 }
 
-func (t *Tree) Init(name string, pltfrm *platform.Platform, force bool) (*tree.Entry, error) {
-	return t.orb.tree.Init(name, pltfrm, force)
+func (t *Tree) Init(name string, path string, pltfrm *platform.Platform, createConfig bool, force bool) (*tree.Entry, error) {
+	tr, err := tree.Init(name, path, pltfrm, createConfig, force)
+	if err != nil {
+		return nil, err
+	}
+
+	return tr, tree.Add(tr)
 }
 
 func (t *Tree) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, error) {
@@ -1056,9 +1057,9 @@ func (t *Tree) Pool(platforms []*platform.Platform, empty bool) (*ops.Pool, erro
 }
 
 func (t *Tree) List() ([]*tree.Entry, error) {
-	return t.orb.tree.List()
+	return tree.List()
 }
 
 func (t *Tree) Switch(name string) error {
-	return t.orb.tree.Switch(name)
+	return tree.Switch(name)
 }

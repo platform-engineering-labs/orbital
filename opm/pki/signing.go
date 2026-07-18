@@ -47,6 +47,16 @@ func (s *Signing) Close() {
 	s.db = nil
 }
 
+func (s *Signing) Touch() error {
+	_, err := s.getDb()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	return nil
+}
+
 func (k *KeyPairs) All() ([]*KeyPairEntry, error) {
 	db, err := k.signing.getDb()
 	if err != nil {

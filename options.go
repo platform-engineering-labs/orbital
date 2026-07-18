@@ -1,6 +1,8 @@
 package orbital
 
 import (
+	"path/filepath"
+
 	"github.com/platform-engineering-labs/orbital/config"
 	"github.com/platform-engineering-labs/orbital/opm/tree"
 )
@@ -25,11 +27,10 @@ func WithEmbedded(path string, cfg *tree.Config) Option {
 		var err error
 
 		o.config = &config.Config{
-			Mode:     config.EmbeddedMode,
-			TreeRoot: path,
+			Mode: config.EmbeddedMode,
 		}
 
-		o.tree, err = tree.New(o.Logger, o.config.TreeRoot, tree.Embedded, o.writeable, cfg)
+		o.tree, err = tree.New(o.Logger, filepath.Base(path), path, o.writeable, cfg)
 		if err != nil {
 			return err
 		}

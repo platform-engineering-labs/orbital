@@ -24,6 +24,10 @@ func DataDefault() string {
 	return filepathx.MustAbs(Data)
 }
 
+func TreeStore() string {
+	return filepathx.MustAbs(filepath.Join(Data, names.TreesDb))
+}
+
 func TreeCache(path string) string {
 	return filepath.Join(path, names.TreeDataDir, names.Cache)
 }

@@ -111,6 +111,16 @@ func (s *State) Close() {
 	s.db = nil
 }
 
+func (s *State) Touch() error {
+	_, err := s.getDb()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	return nil
+}
+
 func (p *Packages) All() ([]*ops.Manifest, error) {
 	db, err := p.state.getDb()
 	if err != nil {

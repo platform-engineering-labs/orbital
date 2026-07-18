@@ -15,8 +15,7 @@ func init() {
 }
 
 type Config struct {
-	Mode     Mode   `pkl:"mode"`
-	TreeRoot string `pkl:"treeRoot"`
+	Mode Mode `pkl:"mode"`
 }
 
 func Load(path string) (*Config, error) {
@@ -35,11 +34,7 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
-	evaluator, err := pkl.NewEvaluator(context.Background(), pkl.WithFs(schema.Schema, "orbital"), pkl.PreconfiguredOptions, func(opts *pkl.EvaluatorOptions) {
-		opts.Properties = map[string]string{
-			"treeRoot": paths.TreeRootDefault(),
-		}
-	})
+	evaluator, err := pkl.NewEvaluator(context.Background(), pkl.WithFs(schema.Schema, "orbital"), pkl.PreconfiguredOptions)
 	if err != nil {
 		return nil, err
 	}
