@@ -146,7 +146,7 @@ func Destroy(name string) (*Entry, error) {
 		return nil, err
 	}
 
-	return tree, os.Remove(tree.Path)
+	return tree, os.RemoveAll(tree.Path)
 }
 
 func Get(name string) (*Entry, error) {
