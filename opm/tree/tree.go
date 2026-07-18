@@ -104,6 +104,12 @@ func Current() (*Entry, error) {
 		_ = Switch(names.TreeDefault)
 	}
 
+	if tree := Virtual(); tree != nil {
+		if current == tree.Path {
+			return tree, nil
+		}
+	}
+
 	db, err := Store()
 	if err != nil {
 		return nil, err
@@ -144,13 +150,21 @@ func Destroy(name string) (*Entry, error) {
 }
 
 func Get(name string) (*Entry, error) {
+	tree := Virtual()
+
+	if tree := Virtual(); tree != nil {
+		if name == "virtual" {
+			return tree, nil
+		}
+	}
+
 	db, err := Store()
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	tree := &Entry{}
+	tree = &Entry{}
 	err = db.One("Name", name, tree)
 	if err != nil {
 		return nil, err
@@ -215,14 +229,34 @@ func List() ([]*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	err = db.All(&trees)
 	if err != nil {
 		return nil, err
 	}
+	db.Close()
+
+	if virt := Virtual(); virt != nil {
+		trees = append(trees, virt)
+	}
 
 	return trees, nil
+}
+
+func Lookup(path string) (*Entry, error) {
+	db, err := Store()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	tree := &Entry{}
+	err = db.One("Path", path, tree)
+	if err != nil {
+		return nil, err
+	}
+
+	return tree, nil
 }
 
 func Privileged(path string) bool {
@@ -245,9 +279,10 @@ func Store() (*storm.DB, error) {
 }
 
 func Switch(name string) error {
+	var err error
+
 	tree, err := Get(name)
 	if err != nil {
-		fmt.Println("sproing")
 		return err
 	}
 
@@ -259,6 +294,34 @@ func Switch(name string) error {
 	}
 
 	return nil
+}
+
+func Virtual() *Entry {
+	var tree *Entry
+
+	binPath, _ := os.Executable()
+	binPathFinal, _ := filepath.EvalSymlinks(binPath)
+
+	if binPathFinal != "" {
+		extRoot := filepath.Dir(filepath.Dir(binPathFinal))
+		_, err := Lookup(extRoot)
+
+		if err != nil {
+			if filepathx.FileExists(filepath.Join(extRoot, names.TreeDataDir)) {
+				_, err := Load(filepath.Join(extRoot, names.TreeDataDir, names.TreeConfigFile))
+				if err != nil {
+					return nil
+				}
+
+				tree = &Entry{
+					Name: "$virtual",
+					Path: extRoot,
+				}
+			}
+		}
+	}
+
+	return tree
 }
 
 func New(log *slog.Logger, name string, path string, writeable bool, cfg *Config) (*Tree, error) {

@@ -118,7 +118,7 @@ func New(logger *slog.Logger, opts ...Option) (*Orbital, error) {
 			return nil, err
 		}
 
-		orb.tree, err = tree.New(logger, current.Name, current.Path, true, nil)
+		orb.tree, err = tree.New(logger, current.Name, current.Path, orb.writeable, nil)
 		if err != nil {
 			return nil, err
 		}
