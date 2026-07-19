@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 
@@ -110,15 +111,15 @@ func Current() (*Entry, error) {
 		}
 	}
 
-	db, err := Store()
+	tree, err := Lookup(current)
 	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
+		if errors.Is(err, storm.ErrNotFound) {
+			return &Entry{
+				Name: "$previous",
+				Path: current,
+			}, nil
+		}
 
-	tree := &Entry{}
-	err = db.One("Path", current, tree)
-	if err != nil {
 		return nil, err
 	}
 
@@ -240,6 +241,15 @@ func List() ([]*Entry, error) {
 		trees = append(trees, virt)
 	}
 
+	if current, err := Current(); err == nil {
+		if !slices.ContainsFunc(
+			trees, func(tree *Entry) bool {
+				return tree.Path == current.Path
+			}) {
+			trees = append(trees, current)
+		}
+	}
+
 	return trees, nil
 }
 
@@ -297,8 +307,6 @@ func Switch(name string) error {
 }
 
 func Virtual() *Entry {
-	var tree *Entry
-
 	binPath, _ := os.Executable()
 	binPathFinal, _ := filepath.EvalSymlinks(binPath)
 
@@ -313,7 +321,7 @@ func Virtual() *Entry {
 					return nil
 				}
 
-				tree = &Entry{
+				return &Entry{
 					Name: "$virtual",
 					Path: extRoot,
 				}
@@ -321,7 +329,7 @@ func Virtual() *Entry {
 		}
 	}
 
-	return tree
+	return nil
 }
 
 func New(log *slog.Logger, name string, path string, writeable bool, cfg *Config) (*Tree, error) {
