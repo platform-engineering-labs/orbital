@@ -113,7 +113,7 @@ func Current() (*Entry, error) {
 
 	tree, err := Lookup(current)
 	if err != nil {
-		if errors.Is(err, storm.ErrNotFound) {
+		if errors.Is(err, storm.ErrNotFound) && filepathx.FileExists(filepath.Join(current, names.TreeDataDir)) {
 			return &Entry{
 				Name: "$previous",
 				Path: current,
