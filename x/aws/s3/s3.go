@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3setlock "github.com/mashiike/s3-setlock"
@@ -16,6 +17,12 @@ func GetS3Client() (*s3.Client, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("loading AWS config: %w", err)
+	}
+
+	// Attempt anonymous access if no credentials resolved
+	_, err = cfg.Credentials.Retrieve(context.Background())
+	if err != nil {
+		cfg.Credentials = aws.AnonymousCredentials{}
 	}
 
 	return s3.NewFromConfig(cfg), nil
