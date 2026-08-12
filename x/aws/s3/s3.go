@@ -13,15 +13,15 @@ import (
 	s3setlock "github.com/mashiike/s3-setlock"
 )
 
-func GetS3Client() (*s3.Client, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background())
+func GetS3Client(region string) (*s3.Client, error) {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("loading AWS config: %w", err)
 	}
 
 	// Attempt anonymous access if no credentials resolved
 	_, err = cfg.Credentials.Retrieve(context.Background())
-	if err != nil {
+	if err != nil || cfg.Credentials == nil {
 		cfg.Credentials = aws.AnonymousCredentials{}
 	}
 

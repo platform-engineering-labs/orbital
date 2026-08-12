@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -28,7 +29,22 @@ type S3Fetcher struct {
 }
 
 func NewS3Fetcher(ftch *Ftch) (*S3Fetcher, error) {
-	client, err := s3x.GetS3Client()
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-west-2"
+	}
+
+	client, err := s3x.GetS3Client(region)
+	if err != nil {
+		return nil, err
+	}
+
+	region, err = manager.GetBucketRegion(context.Background(), client, ftch.repo.Uri.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err = s3x.GetS3Client(region)
 	if err != nil {
 		return nil, err
 	}
