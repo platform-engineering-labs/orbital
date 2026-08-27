@@ -370,6 +370,24 @@ func New(log *slog.Logger, name string, path string, writeable bool, cfg *Config
 	return tr, nil
 }
 
+func (t *Tree) Frozen() map[string]bool {
+	frozenEntries, err := t.State.Frozen.All()
+	if err != nil {
+		return nil
+	}
+
+	frozen := make(map[string]bool)
+	for _, entry := range frozenEntries {
+		frozen[entry.PkgId] = true
+	}
+
+	for _, pkg := range t.Config.VirtualConstraints {
+		frozen[pkg.Id().String()] = true
+	}
+
+	return frozen
+}
+
 func (t *Tree) Lock() error {
 	return t.lock.Lock()
 }
@@ -386,26 +404,18 @@ func (t *Tree) Pool(platforms []*platform.Platform, empty bool, repos ...*ops.Re
 		}
 	}
 
-	frozenEntries, err := t.State.Frozen.All()
-	if err != nil {
-		return nil, err
-	}
-
-	frozen := make(map[string]bool)
-	for _, entry := range frozenEntries {
-		frozen[entry.PkgId] = true
-	}
-
 	uri, _ := url.Parse("tree://none")
 	rpState := ops.NewRepo(*uri, true, -1)
 	if !empty {
+		var err error
+
 		rpState, err = t.StateToRepo()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	pool, err := ops.NewPool(rpState, frozen, repos...)
+	pool, err := ops.NewPool(rpState, t.Frozen(), repos...)
 	if err != nil {
 		return nil, err
 	}
@@ -495,6 +505,10 @@ func (t *Tree) StateToRepo() (*ops.Repository, error) {
 	var headers ops.Headers
 	for _, manifest := range packages {
 		headers = append(headers, manifest.Header)
+	}
+
+	for _, pkg := range t.Config.VirtualConstraints {
+		headers = append(headers, &pkg)
 	}
 
 	uri, _ := url.Parse("tree://" + t.Name)

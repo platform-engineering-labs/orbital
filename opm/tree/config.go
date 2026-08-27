@@ -25,6 +25,8 @@ type Config struct {
 	Security security.Mode `pkl:"security"`
 
 	Repositories []ops.Repository `pkl:"repositories"`
+
+	VirtualConstraints []ops.Header
 }
 
 func (c *Config) Platform() *platform.Platform {
